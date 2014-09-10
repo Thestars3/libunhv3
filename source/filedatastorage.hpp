@@ -13,20 +13,26 @@ GNU Lesser General Public License for more details.
 You should have received a copy of the GNU Lesser General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 
-#ifndef BONDCHUNK_HPP
-#define BONDCHUNK_HPP
+#ifndef FILEDATASTORAGE_HPP
+#define FILEDATASTORAGE_HPP
 
 #include <QVector>
-#include "bondchunkattr.hpp"
+#include <QDataStream>
 #include "bondchunkheader.hpp"
+#include "filedata.hpp"
 
-/** 청크
-  */
-class BondChunk
+class FileDataStorage
 {
-    QVector<BondChunkHeader> header;
-    QVector<BondChunkAttr> attr;
-    QByteArray data;
+private:
+    BondChunkHeader BODY_; ///< 파일데이터를 담는 청크, 속성 청크는 가지지 않으며, 여러개의 하위 FILE 청크를 가진다.
+    QVector<FileData*> fileDataStorage_;
+    friend QDataStream& operator>>(QDataStream &in, FileDataStorage &fileDataStorage);
+
+public:
+    ~FileDataStorage();
+
 };
 
-#endif // BONDCHUNK_HPP
+QDataStream& operator>>(QDataStream &in, FileDataStorage &fileDataStorage);
+
+#endif // FILEDATASTORAGE_HPP

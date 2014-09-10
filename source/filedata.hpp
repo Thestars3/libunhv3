@@ -13,33 +13,27 @@ GNU Lesser General Public License for more details.
 You should have received a copy of the GNU Lesser General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 
-#ifndef BONDCHUNKHEADER_HPP
-#define BONDCHUNKHEADER_HPP
+#ifndef FILEDATA_HPP
+#define FILEDATA_HPP
 
+#include <QByteArray>
 #include <QDataStream>
+#include "bondchunkheader.hpp"
 
-/** 청크 헤더
-  */
-class BondChunkHeader
+class FileData
 {
 private:
-    QString chunkName_;    ///< 청크의 이름
-    uint attrSize_;        ///< 속성 청크의 크기
-    uint subChunkSize_;    ///< 모든 하위 청크의 크기의 합
-    uint chunkDataSize_;   ///< 현재 청크의 데이타 크기
-    friend QDataStream& operator>>(QDataStream &in, BondChunkHeader &bondChunkHeader);
+    BondChunkHeader FILE_; ///< 파일 데이터 청크, 속성청크는 가지지 않는다.
+    QByteArray raw_data_;  ///< 파일 데이터
+    friend QDataStream& operator>>(QDataStream &in, FileData &fileData);
 
 public:
-    const static uint CHUNK_SIZE; ///< 청크 자체의 크기
-
     // < -- Getter -- >
-    QString chunkName();
-    uint attrSize();
-    uint subChunkSize();
-    uint chunkDataSize();
+    BondChunkHeader FILE();
+    QByteArray raw_data();
 
 };
 
-QDataStream& operator>>(QDataStream &in, BondChunkHeader &bondChunkHeader);
+QDataStream& operator>>(QDataStream &in, FileData &fileData);
 
-#endif // BONDCHUNKHEADER_HPP
+#endif // FILEDATA_HPP

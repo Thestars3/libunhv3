@@ -22,8 +22,9 @@ HEADERS  += \
     unhv3status.hpp \
     fileinfo.hpp \
     fileinfolist.hpp \
-    bondchunk.hpp \
-    ufp.hpp
+    ufp.hpp \
+    filedatastorage.hpp \
+    filedata.hpp
 
 SOURCES  += \
 	unhv3.cpp \
@@ -31,8 +32,9 @@ SOURCES  += \
     bondchunkattr.cpp \
     fileinfo.cpp \
     fileinfolist.cpp \
-    bondchunk.cpp \
-    ufp.cpp
+    ufp.cpp \
+    filedatastorage.cpp \
+    filedata.cpp
 
 DEFINES  += \
 	UNHV3_LIBRARY

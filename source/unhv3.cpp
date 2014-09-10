@@ -37,9 +37,12 @@ Unhv3Status Unhv3::open(
         return Unhv3Status::NOT_HV3_FORMAT;
     }
 
-    BondChunkAttr VERS, FSIZ, GUID, UUID, FTIM, DIRE, COPY, ENCR, LINK, TITL, ISBN, WRTR, PUBL, DATE, COMT, MAKR, GENR;
+    BondChunkAttr VERS, FSIZ, GUID, UUID, FTIM, DIRE, COPY, ENCR, LINK,
+            TITL, ISBN, WRTR, PUBL, DATE, COMT, MAKR, GENR;
 
-    dataStream >> VERS >> FSIZ >> HEAD_ >> GUID >> UUID >> FTIM >> DIRE >> ENCR >> COPY >> LINK >> TITL >> ISBN >> WRTR >> PUBL >> DATE >> COPY >> COMT >> MAKR >> GENR >> LIST_;
+    dataStream >> VERS >> FSIZ >> HEAD_ >> GUID >> UUID >> FTIM >> DIRE
+               >> ENCR >> COPY >> LINK >> TITL >> ISBN >> WRTR >> PUBL
+               >> DATE >> COPY >> COMT >> MAKR >> GENR >> LIST_ >> BODY_;
 
     VERS_ = VERS.fromDword();
     FSIZ_ = FSIZ.fromDword();

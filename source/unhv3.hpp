@@ -23,6 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 #include "unhv3status.hpp"
 #include "bondchunkheader.hpp"
 #include "fileinfolist.hpp"
+#include "filedatastorage.hpp"
 
 /** hv3(꿀뷰 전용 포멧)을 풀어줍니다.\n
   이 클래스의 멤버 중 `[A-Z0-9]{4}_'형식으로 된 이름은 청크명, 청크 속성명입니다.\n
@@ -55,6 +56,8 @@ private:
     QString         MAKR_; ///< HV3 File maker
     QString         GENR_; ///< Genere
     FileInfoList    LIST_; ///< 파일 정보 목록, 여러개의 하위 FINF 청크를 가진다.
+    FileDataStorage BODY_; ///< 파일데이터를 담는 청크, 속성 청크는 가지지 않으며, 여러개의 하위 FILE 청크를 가진다.
+
 
 };
 
