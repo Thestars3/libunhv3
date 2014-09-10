@@ -1,0 +1,5 @@
+
+* Qt : https://qt-project.org/products/licensing
+
+	LGPL 2.1
+

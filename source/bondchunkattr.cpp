@@ -1,0 +1,95 @@
+#include <QTextCodec>
+#include "bondchunkattr.hpp"
+
+/** hv3 포멧의 DWORD 타입을 uint 타입으로 저장합니다.
+  */
+uint BondChunkAttr::fromDword()
+{
+    QDataStream dataStream;
+    quint32 i;
+    dataStream.readBytes((char*&)attrData_, (uint&)attrDataSize_);
+    dataStream >> i;
+    return i;
+}
+
+/** hv3 포멧의 STRING 타입을 QString 타입으로 저장합니다.
+  @return QString
+  */
+QString BondChunkAttr::fromString()
+{
+    return textCodec->toUnicode((const char*)attrData_, (int)attrDataSize_);
+}
+
+/** hv3 포멧의 FILETIME 타입을 QDateTime 타입으로 저장합니다.
+  @return QDateTime
+  */
+QDateTime BondChunkAttr::fromFiletime()
+{
+    QDataStream dataStream;
+    QDateTime dateTime;
+    qint32 nYear, nMonth, nDay, nHour, nMin, nSec;
+    dataStream.readBytes((char*&)attrData_, (uint&)attrDataSize_);
+    dataStream >> nYear >> nMonth >> nDay >> nHour >> nMin >> nSec;
+    dateTime.setDate(QDate(nYear, nMonth, nDay));
+    dateTime.setTime(QTime(nHour, nMin, nSec));
+    return dateTime;
+}
+
+/** 생성자.
+  */
+BondChunkAttr::BondChunkAttr()
+{
+    textCodec = QTextCodec::codecForName("UCS-2 LE");
+    attrData_ = nullptr;
+}
+
+/** 소멸자.
+  */
+BondChunkAttr::~BondChunkAttr()
+{
+    if ( attrData_ != nullptr ) {
+        delete attrData_;
+    }
+}
+
+/** BondChunkAttr 역직렬화 수행자.
+  */
+QDataStream& operator>>(
+        QDataStream &in,
+        BondChunkAttr &bondChunkAttr
+        )
+{
+    char attrName[5] = {'\0',};
+    in.readRawData(attrName, 4);
+    bondChunkAttr.attrName_ = attrName;
+
+    in >> bondChunkAttr.attrDataSize_;
+
+    in.readBytes((char*&)bondChunkAttr.attrData_, (uint&)bondChunkAttr.attrDataSize_);
+
+    return in;
+}
+
+/** 속성의 이름을 반환한다.
+  @return 속성의 이름
+  */
+QString BondChunkAttr::attrName()
+{
+    return attrName_;
+}
+
+/** 속성 정보의 크기를 반환한다.
+  @return 속성 정보의 크기
+  */
+quint32 BondChunkAttr::attrDataSize()
+{
+    return attrDataSize_;
+}
+
+/** 속성 데이터를 반환한다.
+  @return 속성 데이터
+  */
+quint8* BondChunkAttr::attrData()
+{
+    return attrData_;
+}
