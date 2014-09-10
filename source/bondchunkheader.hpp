@@ -30,11 +30,13 @@ private:
     friend QDataStream& operator>>(QDataStream &in, BondChunkHeader &bondChunkHeader);
 
 public:
+    const static uint CHUNK_SIZE; ///< 청크 자체의 크기
+
+    // < -- Getter -- >
     QString chunkName();
     quint32 attrSize();
     quint32 subChunkSize();
     quint32 chunkDataSize();
-    const static uint CHUNK_SIZE; ///< 청크 자체의 크기
 
 };
 

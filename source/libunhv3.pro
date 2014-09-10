@@ -21,14 +21,18 @@ HEADERS  += \
     bondchunkattr.hpp \
     unhv3status.hpp \
     fileinfo.hpp \
-    fileinfolist.hpp
+    fileinfolist.hpp \
+    bondchunk.hpp \
+    ufp.hpp
 
 SOURCES  += \
 	unhv3.cpp \
     bondchunkheader.cpp \
     bondchunkattr.cpp \
     fileinfo.cpp \
-    fileinfolist.cpp
+    fileinfolist.cpp \
+    bondchunk.cpp \
+    ufp.cpp
 
 DEFINES  += \
 	UNHV3_LIBRARY

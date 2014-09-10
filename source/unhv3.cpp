@@ -1,6 +1,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QDataStream>
+#include "bondchunkattr.hpp"
 #include "unhv3.hpp"
 
 /** filepath에 존재하는 hv3 파일을 엽니다.
@@ -36,12 +37,14 @@ Unhv3Status Unhv3::open(
         return Unhv3Status::NOT_HV3_FORMAT;
     }
 
-    BondChunkAttr VERS, FSIZ, FTIM, DIRE, COPY, ENCR, LINK, TITL, ISBN, WRTR, PUBL, DATE, COMT, MAKR, GENR;
+    BondChunkAttr VERS, FSIZ, GUID, UUID, FTIM, DIRE, COPY, ENCR, LINK, TITL, ISBN, WRTR, PUBL, DATE, COMT, MAKR, GENR;
 
-    dataStream >> VERS >> FSIZ >> HEAD_ >> GUID_ >> UUID_ >> FTIM >> DIRE >> ENCR >> COPY >> LINK >> TITL >> ISBN >> WRTR >> PUBL >> DATE >> COPY >> COMT >> MAKR >> GENR >> LIST_;
+    dataStream >> VERS >> FSIZ >> HEAD_ >> GUID >> UUID >> FTIM >> DIRE >> ENCR >> COPY >> LINK >> TITL >> ISBN >> WRTR >> PUBL >> DATE >> COPY >> COMT >> MAKR >> GENR >> LIST_;
 
     VERS_ = VERS.fromDword();
     FSIZ_ = FSIZ.fromDword();
+    GUID_ = GUID.fromGuid();
+    UUID_ = UUID.fromUuid();
     FTIM_ = FTIM.fromFiletime();
     DIRE_ = DIRE.fromDword();
     ENCR_ = ENCR.fromDword();

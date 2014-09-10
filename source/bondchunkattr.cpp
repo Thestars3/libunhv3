@@ -1,7 +1,47 @@
 #include <QTextCodec>
 #include "bondchunkattr.hpp"
 
+/** hv3 포멧의 GUID 타입을 QUuid 타입으로 저장합니다.\n
+  마이크로스트社에서 UUID 표준을 구현한 것이 GUID이며, 메모리 구조상으로 UUID와 동일하다.
+  @return QUuid
+  */
+QUuid BondChunkAttr::fromGuid()
+{
+    QDataStream dataStream;
+    uint l;
+    ushort w1, w2;
+    uchar b[8];
+    quint32 u32;
+    quint16 u16;
+    quint8 u8;
+    dataStream.readBytes((char*&)attrData_, (uint&)attrDataSize_);
+    dataStream >> u32;
+    l = u32;
+    dataStream >> u16;
+    w1 = u16;
+    dataStream >> u16;
+    w2 = u16;
+    for (int i = 0; i < 8; i++) {
+        dataStream >> u8;
+        b[i] = u8;
+    }
+    return QUuid(l, w1, w2, b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]);
+}
+
+/** hv3 포멧의 UUID 타입을 QUuid 타입으로 저장합니다.
+  @return QUuid
+  */
+QUuid BondChunkAttr::fromUuid()
+{
+    QDataStream dataStream;
+    dataStream.readBytes((char*&)attrData_, (uint&)attrDataSize_);
+    QUuid uuid;
+    dataStream >> uuid;
+    return uuid;
+}
+
 /** hv3 포멧의 DWORD 타입을 uint 타입으로 저장합니다.
+  @return uint
   */
 uint BondChunkAttr::fromDword()
 {
@@ -12,7 +52,7 @@ uint BondChunkAttr::fromDword()
     return i;
 }
 
-/** hv3 포멧의 STRING 타입을 QString 타입으로 저장합니다.
+/** hv3 포멧의 STRING 타입을 QString 타입으로 바꾸어 저장합니다.
   @return QString
   */
 QString BondChunkAttr::fromString()
@@ -20,7 +60,7 @@ QString BondChunkAttr::fromString()
     return textCodec->toUnicode((const char*)attrData_, (int)attrDataSize_);
 }
 
-/** hv3 포멧의 FILETIME 타입을 QDateTime 타입으로 저장합니다.
+/** hv3 포멧의 FILETIME 타입을 QDateTime 타입으로 바꾸어 저장합니다.
   @return QDateTime
   */
 QDateTime BondChunkAttr::fromFiletime()

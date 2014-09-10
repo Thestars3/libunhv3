@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 #ifndef BONDCHUNKATTR_HPP
 #define BONDCHUNKATTR_HPP
 
+#include <QUuid>
 #include <QDateTime>
 #include <QDataStream>
 
@@ -31,14 +32,20 @@ private:
     friend QDataStream& operator>>(QDataStream &in, BondChunkAttr &bondChunkAttr);
 
 public:
+    BondChunkAttr();
+    ~BondChunkAttr();
+
+    // < -- Getter -- >
     QString attrName();
     quint32 attrDataSize();
     quint8* attrData();
-    BondChunkAttr();
-    ~BondChunkAttr();
+
+    // < -- 변환 메소드 -- >
     QString fromString();
     QDateTime fromFiletime();
     uint fromDword();
+    QUuid fromGuid();
+    QUuid fromUuid();
 
 };
 

@@ -13,19 +13,20 @@ GNU Lesser General Public License for more details.
 You should have received a copy of the GNU Lesser General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 
-#ifndef UNHV3STATUS_HPP
-#define UNHV3STATUS_HPP
+#ifndef BONDCHUNK_HPP
+#define BONDCHUNK_HPP
 
-/** unhv3 작업 상태에 대한 정보 열거자.
+#include <QVector>
+#include "bondchunkattr.hpp"
+#include "bondchunkheader.hpp"
+
+/** 청크
   */
-enum class Unhv3Status
+class BondChunk
 {
-    NO_ERROR,        ///< 오류 없음
-    FILE_NOT_EXIST,  ///< 파일 존재하지 않음
-    CANT_READ_FILE,  ///< 파일을 읽을수 없음
-    IS_NOT_FILE,     ///< 파일이 아님
-    NOT_HV3_FORMAT,  ///< hv3 포멧이 아님
-    CRC_ERROR        ///< CRC 오류
+    QVector<BondChunkHeader> header;
+    QVector<BondChunkAttr> attr;
+    QByteArray data;
 };
 
-#endif // UNHV3STATUS_HPP
+#endif // BONDCHUNK_HPP

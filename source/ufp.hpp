@@ -13,19 +13,18 @@ GNU Lesser General Public License for more details.
 You should have received a copy of the GNU Lesser General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 
-#ifndef UNHV3STATUS_HPP
-#define UNHV3STATUS_HPP
+#ifndef UFP_HPP
+#define UFP_HPP
 
-/** unhv3 작업 상태에 대한 정보 열거자.
+#include <QtGlobal>
+
+/*사용자 함수 묶음.\n
+  Qt 4.8.0에 기반한 함수들로 재작성됨.
   */
-enum class Unhv3Status
-{
-    NO_ERROR,        ///< 오류 없음
-    FILE_NOT_EXIST,  ///< 파일 존재하지 않음
-    CANT_READ_FILE,  ///< 파일을 읽을수 없음
-    IS_NOT_FILE,     ///< 파일이 아님
-    NOT_HV3_FORMAT,  ///< hv3 포멧이 아님
-    CRC_ERROR        ///< CRC 오류
+namespace ufp {
+
+quint32 computeCrc32(const char *data, uint len);
+
 };
 
-#endif // UNHV3STATUS_HPP
+#endif // UFP_HPP

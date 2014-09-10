@@ -16,17 +16,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 #ifndef UNHV3_HPP
 #define UNHV3_HPP
 
+#include <QUuid>
 #include <QString>
 #include <QDateTime>
 #include "unhv3_global.hpp"
 #include "unhv3status.hpp"
-#include "bondchunkattr.hpp"
 #include "bondchunkheader.hpp"
 #include "fileinfolist.hpp"
 
 /** hv3(꿀뷰 전용 포멧)을 풀어줍니다.\n
   이 클래스의 멤버 중 `[A-Z0-9]{4}_'형식으로 된 이름은 청크명, 청크 속성명입니다.\n
-  hv3 포멧 문서 : <a>http://www.kippler.com/doc/bond/BondFormat.txt</a>
+  <a href="http://www.kippler.com/doc/bond/BondFormat.txt">BondFormat Specification v1.0</a>를 참고하여 만들었습니다.\n
+  고정된 청크 배치를 읽어도록 하였으므로, 속성의 개수나 위치가 바뀐다면 소스를 수정해야 합니다.\n
   */
 class UNHV3SHARED_EXPORT Unhv3 {
 public:
@@ -37,8 +38,8 @@ private:
     uint            VERS_; ///< HV3 포맷의 버전 정보
     uint            FSIZ_; ///< 전체 파일의 크기
     BondChunkHeader HEAD_; ///< HV3 파일에 대한 정보
-    BondChunkAttr   GUID_; ///< 파일의 GUID
-    BondChunkAttr   UUID_; ///< UUID
+    QUuid           GUID_; ///< 파일의 GUID
+    QUuid           UUID_; ///< UUID
     QDateTime       FTIM_; ///< 파일이 만들어진 시간
     uint            DIRE_; ///< 책의 제본방식 0: 정보없음, 1:left to right 2:right to left
     uint            ENCR_; ///< 파일의 암호화 방식, 0:암호화 없음

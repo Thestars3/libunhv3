@@ -30,6 +30,7 @@ private:
     friend QDataStream& operator>>(QDataStream &in, FileInfo &fileInfo);
 
 public:
+    // < -- Getter -- >
     BondChunkHeader FINF();
     QString NAME();
     uint POS4();
