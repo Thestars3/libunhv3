@@ -4,10 +4,45 @@
 #include "bondchunkattr.hpp"
 #include "unhv3.hpp"
 
-/** filepath에 존재하는 hv3 파일을 엽니다.
-  @return 상태 코드. 성공적으로 끝났다면, Unhv3Status::NO_ERROR를 반환.
+Unhv3::Unhv3()
+{
+    status = Unhv3Status::NO_ERROR;
+}
+
+/** 마지막으로 발생한 오류의 상세 내용을 확인한다.
+  @return 상태코드.
   */
-Unhv3Status Unhv3::open(
+Unhv3Status Unhv3::getLastError()
+{
+    return status;
+}
+
+/** 지정된 경로에 파일을 모두 푼다.
+  @return 성공여부.
+  */
+bool Unhv3::extractAllTo(
+        const QString &savePath ///< 저장 경로
+        )
+{
+    QFileInfo pathInfo(savePath);
+
+    if ( ! pathInfo.exists() ) {
+        status = Unhv3Status::SAVEPATH_NOT_EXIST;
+        return false;
+    }
+
+    if ( ! pathInfo.isDir() ) {
+        status = Unhv3Status::SAVEPATH_IS_NOT_DIR;
+        return false;
+    }
+
+    return true;
+}
+
+/** filepath에 존재하는 hv3 파일을 엽니다.
+  @return 성공 여부.
+  */
+bool Unhv3::open(
         const QString &filepath ///< 파일 경로
         )
 {
@@ -16,25 +51,25 @@ Unhv3Status Unhv3::open(
     QFileInfo fileInfo(file);
 
     if ( ! fileInfo.exists() ) {
-        return Unhv3Status::FILE_NOT_EXIST;
+        status = Unhv3Status::FILE_NOT_EXIST;
+        return false;
     }
 
     if ( ! fileInfo.isReadable() ) {
-        return Unhv3Status::CANT_READ_FILE;
-    }
-
-    if ( ! fileInfo.isFile() ) {
-        return Unhv3Status::IS_NOT_FILE;
+        status = Unhv3Status::CANT_READ_FILE;
+        return false;
     }
 
     if ( fileInfo.size() < 4 ) {
-        return Unhv3Status::NOT_HV3_FORMAT;
+        status = Unhv3Status::NOT_HV3_FORMAT;
+        return false;
     }
 
     dataStream >> HV30_;
 
     if ( HV30_.chunkName() != "HV30" ) {
-        return Unhv3Status::NOT_HV3_FORMAT;
+        status = Unhv3Status::NOT_HV3_FORMAT;
+        return false;
     }
 
     BondChunkAttr VERS, FSIZ, GUID, UUID, FTIM, DIRE, COPY, ENCR, LINK,
@@ -62,5 +97,6 @@ Unhv3Status Unhv3::open(
     MAKR_ = MAKR.fromString();
     GENR_ = GENR.fromString();
 
-    return Unhv3Status::NO_ERROR;
+    status = Unhv3Status::NO_ERROR;
+    return true;
 }

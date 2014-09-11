@@ -24,9 +24,9 @@ class BondChunkHeader
 {
 private:
     QString chunkName_;    ///< 청크의 이름
-    uint attrSize_;        ///< 속성 청크의 크기
-    uint subChunkSize_;    ///< 모든 하위 청크의 크기의 합
-    uint chunkDataSize_;   ///< 현재 청크의 데이타 크기
+    quint32 attrSize_;        ///< 속성 청크의 크기
+    quint32 subChunkSize_;    ///< 모든 하위 청크의 크기의 합
+    quint32 chunkDataSize_;   ///< 현재 청크의 데이타 크기
     friend QDataStream& operator>>(QDataStream &in, BondChunkHeader &bondChunkHeader);
 
 public:
@@ -34,9 +34,9 @@ public:
 
     // < -- Getter -- >
     QString chunkName();
-    uint attrSize();
-    uint subChunkSize();
-    uint chunkDataSize();
+    quint32 attrSize();
+    quint32 subChunkSize();
+    quint32 chunkDataSize();
 
 };
 

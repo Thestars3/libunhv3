@@ -14,7 +14,7 @@ QUuid BondChunkAttr::fromGuid()
     quint32 u32;
     quint16 u16;
     quint8 u8;
-    dataStream.readBytes((char*&)attrData_, (uint&)attrDataSize_);
+    dataStream.readBytes(reinterpret_cast<char*&>(attrData_), attrDataSize_);
     dataStream >> u32;
     l = u32;
     dataStream >> u16;
@@ -34,7 +34,7 @@ QUuid BondChunkAttr::fromGuid()
 QUuid BondChunkAttr::fromUuid()
 {
     QDataStream dataStream;
-    dataStream.readBytes((char*&)attrData_, (uint&)attrDataSize_);
+    dataStream.readBytes(reinterpret_cast<char*&>(attrData_), attrDataSize_);
     QUuid uuid;
     dataStream >> uuid;
     return uuid;
@@ -47,7 +47,7 @@ uint BondChunkAttr::fromDword()
 {
     QDataStream dataStream;
     quint32 i;
-    dataStream.readBytes((char*&)attrData_, (uint&)attrDataSize_);
+    dataStream.readBytes(reinterpret_cast<char*&>(attrData_), attrDataSize_);
     dataStream >> i;
     return i;
 }
@@ -57,7 +57,7 @@ uint BondChunkAttr::fromDword()
   */
 QString BondChunkAttr::fromString()
 {
-    return textCodec->toUnicode((const char*)attrData_, (int)attrDataSize_);
+    return textCodec->toUnicode(reinterpret_cast<char*>(attrData_), attrDataSize_);
 }
 
 /** hv3 포멧의 FILETIME 타입을 QDateTime 타입으로 바꾸어 저장합니다.
@@ -68,7 +68,7 @@ QDateTime BondChunkAttr::fromFiletime()
     QDataStream dataStream;
     QDateTime dateTime;
     qint32 nYear, nMonth, nDay, nHour, nMin, nSec;
-    dataStream.readBytes((char*&)attrData_, (uint&)attrDataSize_);
+    dataStream.readBytes(reinterpret_cast<char*&>(attrData_), attrDataSize_);
     dataStream >> nYear >> nMonth >> nDay >> nHour >> nMin >> nSec;
     dateTime.setDate(QDate(nYear, nMonth, nDay));
     dateTime.setTime(QTime(nHour, nMin, nSec));
@@ -105,7 +105,7 @@ QDataStream& operator>>(
 
     in >> bondChunkAttr.attrDataSize_;
 
-    in.readBytes((char*&)bondChunkAttr.attrData_, (uint&)bondChunkAttr.attrDataSize_);
+    in.readBytes(reinterpret_cast<char*&>(bondChunkAttr.attrData_), bondChunkAttr.attrDataSize_);
 
     return in;
 }

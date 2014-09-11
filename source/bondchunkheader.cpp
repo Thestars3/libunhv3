@@ -31,7 +31,7 @@ QString BondChunkHeader::chunkName()
 /** 속성 청크의 크기를 반환합니다.
   @return 속성 청크의 크기
   */
-uint BondChunkHeader::attrSize()
+quint32 BondChunkHeader::attrSize()
 {
     return attrSize_;
 }
@@ -39,7 +39,7 @@ uint BondChunkHeader::attrSize()
 /** 모든 하위 청크의 크기의 합을 반환합니다.
   @return 모든 하위 청크의 크기의 합
   */
-uint BondChunkHeader::subChunkSize()
+quint32 BondChunkHeader::subChunkSize()
 {
     return subChunkSize_;
 }
@@ -47,7 +47,7 @@ uint BondChunkHeader::subChunkSize()
 /** 현재 청크의 데이타 크기를 반환합니다.
   @return 현재 청크의 데이타 크기
   */
-uint BondChunkHeader::chunkDataSize()
+quint32 BondChunkHeader::chunkDataSize()
 {
     return chunkDataSize_;
 }

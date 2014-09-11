@@ -12,9 +12,12 @@ Release/
 /sync
 /memo.txt
 /BondFormat.txt
+/HDPhoto/doc
 
 #특정 파일 무시
 Makefile
+Makefile.*
 
 #특정 파일들을 무시하지 않음.
 !.gitignore
+!/HDPhoto/doc/HDPhoto_eula.txt
