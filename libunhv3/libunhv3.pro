@@ -12,7 +12,7 @@ TEMPLATE = lib
 
 TARGET   = unhv3
 
-QT       -= gui
+QT       += gui
 
 VERSION  = $$system(cat $${ROOT_PATH}/version)
 
@@ -42,7 +42,5 @@ SOURCES  += \
 
 DEFINES  += \
 	UNHV3_LIBRARY
-
-QMAKE_CFLAGS_WARN_ON += -Wmissing-field-initializers
 
 QMAKE_CXXFLAGS += -std=c++0x

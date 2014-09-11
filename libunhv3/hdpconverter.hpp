@@ -16,52 +16,21 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 #ifndef HDPCONVERTER_HPP
 #define HDPCONVERTER_HPP
 
+#include <QImage>
 #include <JXRTest.h>
 #include <QByteArray>
 
 class HdpConverter
 {
 private:
-    typedef struct tagWMPDECAPPARGS
-    {
-        char* szInputFile;
-        char* szOutputFile;
-
-        Bool bVerbose;
-
-        PKPixelFormatGUID guidPixFormat;
-
-        // region decode
-        size_t rLeftX;
-        size_t rTopY;
-        size_t rWidth;
-        size_t rHeight;
-
-        // thumbnail
-        size_t tThumbnailFactor;
-
-        // orientation
-        ORIENTATION oOrientation;
-
-        // post processing
-        U8 cPostProcStrength;
-
-        U8 uAlphaMode; // 0:no alpha 1: alpha only else: something + alpha
-
-        SUBBAND sbSubband;  // which subbands to keep (for transcoding)
-
-        BITSTREAMFORMAT bfBitstreamFormat; // desired bitsream format (for transcoding)
-
-        CWMIStrCodecParam wmiSCP;
-
-        Bool bIgnoreOverlap;
-    } WMPDECAPPARGS;
-    void WmpDecAppCreateEncoderFromExt(PKCodecFactory* pCFactory, const char* szExt, PKImageEncode** ppIE);
-    void WmpDecAppParseArgs(WMPDECAPPARGS* args);
-    void WmpDecAppInitDefaultArgs(WMPDECAPPARGS* args);
+    char *pExt;
+    PKImageDecode *pDecoder;
+    void WmpDecAppCreateEncoder(PKImageEncode **ppIE);
+    ERR PKCodecFactory_CreateDecoderFromMemory(const QByteArray &source);
 
 public:
-    QByteArray convertToBmp();
+    HdpConverter();
+    QByteArray convertToBmp(const QByteArray &source);
 
 };
 

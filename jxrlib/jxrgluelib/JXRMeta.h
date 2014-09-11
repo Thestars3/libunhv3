@@ -1,14 +1,14 @@
 //*@@@+++@@@@******************************************************************
 //
-// Copyright © Microsoft Corp.
+// Copyright Â© Microsoft Corp.
 // All rights reserved.
 // 
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 
-// • Redistributions of source code must retain the above copyright notice,
+// â€¢ Redistributions of source code must retain the above copyright notice,
 //   this list of conditions and the following disclaimer.
-// • Redistributions in binary form must reproduce the above copyright notice,
+// â€¢ Redistributions in binary form must reproduce the above copyright notice,
 //   this list of conditions and the following disclaimer in the documentation
 //   and/or other materials provided with the distribution.
 // 
@@ -255,4 +255,4 @@ EXTERN_C ERR setbfdwbig(U8* pb, size_t cb, size_t ofs, U32 dw);
 EXTERN_C ERR BufferCalcIFDSize(const U8* pb, size_t cb, U32 uIFDOfs, U8 endian, U32 *pcbifd);
 EXTERN_C ERR StreamCalcIFDSize(struct WMPStream* pWS, U32 uIFDOfs, U32 *pcbifd);
 EXTERN_C ERR BufferCopyIFD(const U8* pbsrc, U32 cbsrc, U32 ofssrc, U8 endian, U8* pbdest, U32 cbdest, U32* pofsdest);
-EXTERN_C ERR StreamCopyIFD(struct WMPStream* pWS, U32 ofssrc, U8* pbdest, U32 cbdest, U32* pofsdest);
+EXTERN_C ERR StreamCopyIFD(struct WMPStream* pWS, U32 ofssrc, U8* pbdest, U32 cbdest, U32* pofsdest);
