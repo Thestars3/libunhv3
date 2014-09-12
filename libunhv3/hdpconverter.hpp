@@ -17,6 +17,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 #define HDPCONVERTER_HPP
 
 #include <QImage>
+#include <QBuffer>
 #include <JXRTest.h>
 #include <QByteArray>
 
@@ -25,13 +26,20 @@ class HdpConverter
 private:
     char *pExt;
     PKImageDecode *pDecoder;
-    void WmpDecAppCreateEncoder(PKImageEncode **ppIE);
+    QBuffer buffer; // 메모리 테스트 용
+    QImage image;
     ERR PKCodecFactory_CreateDecoderFromMemory(const QByteArray &source);
+    friend ERR PKImageEncode_WritePixels_QImage(PKImageEncode* pIE, U32 cLine, U8* pbPixel, U32 cbStride);
+    ERR WriteQImageHeader(PKImageEncode* pIE);
 
 public:
     HdpConverter();
-    QByteArray convertToBmp(const QByteArray &source);
+    void loadHdpData(const QByteArray &source);
+    void toJpeg(const QString &filePath);
+    void toPng(const QString &filePath);
 
 };
+
+ERR PKImageEncode_WritePixels_QImage(PKImageEncode* pIE, U32 cLine, U8* pbPixel, U32 cbStride);
 
 #endif // HDPCONVERTER_HPP

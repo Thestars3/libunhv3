@@ -7,17 +7,18 @@
 ## 특징
 
 - hv3(꿀뷰 전용 포멧)을 풀 수 있습니다.
-- Jpeg XR(HD Photo) 포멧으로 된 파일을 jpeg 포멧으로 변환 시킬 수 있습니다. ex) 001.hdp -> 001.jpg
-- hv3(꿀뷰 전용 포멧)에 관련된 정보를 읽어 올 수 있습니다.
+- Jpeg XR(HD Photo) 포멧으로 된 파일을 JPEG 포멧(또는 PNG 포멧)으로 바꾸어 저장 해줍니다.
+	+ ex) 001.hdp -> 001.jpg
+- HDP 포멧 변환 과정에서 어떠한 손실도 일어나지 않습니다. JPG(또는 PNG) <-> HDP를 수차례 바꿔도 동일 파일임을 보장해 줍니다. 단, 메타 데이터는 보존시키지 않으므로 손실되게 됩니다.
+- hv3(꿀뷰 전용 포멧)에 포함된 속성 정보를 읽어 올 수 있습니다.
 
 ## 발생 가능한 문제
 
 - STRING의 크기가 2GB 이상인 경우 문제가 발생 합니다.
 - 16비트 환경에서 문제가 발생합니다.
-
 ## 수정사항
 
-[changelog.md](changelog.md)
+[changelog.md](changelog.md) 파일을 참조하세요.
 
 ## 라이센스
 
@@ -25,7 +26,7 @@
 
 ## 사용한 프로그램 라이센스
 
-[License.txt](License.txt)
+[License.txt](License.txt) 파일을 참조하세요.
 
 ## 개발자
 
@@ -33,4 +34,4 @@
 
 ## 소스 코드
 
-<https://github.com/Thestars3/libunhv3>
+소스 코드는 <https://github.com/Thestars3/libunhv3>에 올려져 있습니다.
