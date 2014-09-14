@@ -1,6 +1,6 @@
-#include <QFile>
 #include <QFileInfo>
 #include <QDataStream>
+#include "HdpConverter/hdpconverter.hpp"
 #include "bondchunkattr.hpp"
 #include "unhv3.hpp"
 
@@ -36,7 +36,49 @@ bool Unhv3::extractAllTo(
         return false;
     }
 
-    return true;
+    return false;
+}
+
+/** 압축파일 내의 파일 아이템 갯수를 리턴합니다.
+  @return 압축파일 내의 파일 아이템 갯수
+  */
+int Unhv3::getFileItemCount()
+{
+    return LIST_.getFileItemCount();
+}
+
+const FileInfo* Unhv3::getFileItem(
+        int index
+        )
+{
+    return LIST_.getFileItem(index);
+}
+
+bool Unhv3::extractOneTo(
+        int index,
+        const QString &savePath
+        )
+{
+    bool success = true;
+    uint pos = LIST_.getFileItem(index)->POS4();
+    QByteArray *raw_data = BODY_.getFileData(pos)->raw_data();
+
+    try {
+        HdpConverter::getInstance()->setData(*raw_data);
+        if ( HdpConverter::getInstance()->hasAlphaChannel() ) {
+            HdpConverter::getInstance()->saveToPng(savePath);
+        }
+        else {
+            HdpConverter::getInstance()->saveToJpeg(savePath);
+        }
+    }
+    catch (WMP_err &err) {
+        success = false;
+    }
+
+    delete raw_data;
+
+    return success;
 }
 
 /** filepath에 존재하는 hv3 파일을 엽니다.
@@ -46,8 +88,12 @@ bool Unhv3::open(
         const QString &filepath ///< 파일 경로
         )
 {
-    QFile file(filepath);
-    QDataStream dataStream(&file);
+    if ( file.isOpen() ) {
+        file.close();
+    }
+    file.setFileName(filepath);
+    fileStream_.setDevice(&file);
+
     QFileInfo fileInfo(file);
 
     if ( ! fileInfo.exists() ) {
@@ -65,7 +111,7 @@ bool Unhv3::open(
         return false;
     }
 
-    dataStream >> HV30_;
+    fileStream_ >> HV30_;
 
     if ( HV30_.chunkName() != "HV30" ) {
         status = Unhv3Status::NOT_HV3_FORMAT;
@@ -75,7 +121,7 @@ bool Unhv3::open(
     BondChunkAttr VERS, FSIZ, GUID, UUID, FTIM, DIRE, COPY, ENCR, LINK,
             TITL, ISBN, WRTR, PUBL, DATE, COMT, MAKR, GENR;
 
-    dataStream >> VERS >> FSIZ >> HEAD_ >> GUID >> UUID >> FTIM >> DIRE
+    fileStream_ >> VERS >> FSIZ >> HEAD_ >> GUID >> UUID >> FTIM >> DIRE
                >> ENCR >> COPY >> LINK >> TITL >> ISBN >> WRTR >> PUBL
                >> DATE >> COPY >> COMT >> MAKR >> GENR >> LIST_ >> BODY_;
 

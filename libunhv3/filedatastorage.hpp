@@ -29,6 +29,7 @@ private:
     friend QDataStream& operator>>(QDataStream &in, FileDataStorage &fileDataStorage);
 
 public:
+    const FileData* getFileData(uint pos);
     ~FileDataStorage();
 
 };

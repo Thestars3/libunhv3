@@ -24,3 +24,15 @@ FileInfoList::~FileInfoList()
 {
     qDeleteAll(fileInfoList_);
 }
+
+int FileInfoList::getFileItemCount()
+{
+    return fileInfoList_.count();
+}
+
+const FileInfo* FileInfoList::getFileItem(
+        int index
+        )
+{
+    return fileInfoList_.at(index);
+}

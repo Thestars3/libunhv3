@@ -18,10 +18,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 
 #include <QImage>
 #include <QByteArray>
+#include "wmp_err.hpp"
+
+typedef struct tagPKImageEncode PKImageEncode;
+typedef struct tagPKImageDecode PKImageDecode;
+typedef uint U32;
+typedef uchar U8;
 
 /** HDP 변환기.\n
   HDP -> JPEG, HDP -> PNG 단방향 포멧 변환 기능을 제공합니다.\n
   JPEG 변환시, 이미지는 압축되지 않습니다.\n
+  @exception WMP_err
   @warning 변환 결과물은 모든 메타 정보를 소실합니다.
   */
 class HdpConverter
@@ -52,7 +59,7 @@ private:
 public:
     void relrease();
     bool hasAlphaChannel();
-    HdpConverter* getInstance();
+    static HdpConverter* getInstance();
     HdpConverter* setData(const QByteArray &hdpData);
     bool saveToJpeg(const QString &filePath);
     bool saveToPng(const QString &filePath);

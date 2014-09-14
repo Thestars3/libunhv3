@@ -36,7 +36,7 @@ QString FileInfo::NAME()
 /** hv3파일에서의 파일 청크 위치를 얻습니다.
   @return hv3파일에서의 파일 청크 위치
   */
-uint FileInfo::POS4()
+uint FileInfo::POS4() const
 {
     return POS4_;
 }

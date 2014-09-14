@@ -18,6 +18,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 #include <QtCore>
 #include <QString>
 
+typedef long ERR;
+
 class WMP_err :
         public QtConcurrent::Exception
 {
@@ -25,8 +27,8 @@ private:
     ERR err_;
 
 public:
-    virtual void raise();
-    virtual const Exception* clone();
+    virtual void raise() const;
+    virtual Exception* clone() const;
     WMP_err(ERR err);
     ERR getErrorCode();
     QString getErrorMessage();

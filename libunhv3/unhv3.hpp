@@ -16,14 +16,15 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 #ifndef UNHV3_HPP
 #define UNHV3_HPP
 
+#include <QFile>
 #include <QUuid>
 #include <QString>
 #include <QDateTime>
-#include "unhv3_global.hpp"
-#include "unhv3status.hpp"
-#include "bondchunkheader.hpp"
-#include "fileinfolist.hpp"
 #include "filedatastorage.hpp"
+#include "bondchunkheader.hpp"
+#include "unhv3_global.hpp"
+#include "fileinfolist.hpp"
+#include "unhv3status.hpp"
 
 /** hv3(꿀뷰 전용 포멧)을 풀어줍니다.\n
   이 클래스의 멤버 중 `[A-Z0-9]{4}_'형식으로 된 이름은 청크명, 청크 속성명입니다.\n
@@ -36,8 +37,13 @@ public:
     bool open(const QString &filepath);
     bool extractAllTo(const QString &savePath);
     Unhv3Status getLastError();
+    int getFileItemCount();
+    bool extractOneTo(int index, const QString &savePath);
+    const FileInfo* getFileItem(int index);
 
 private:
+    QFile file;
+    QDataStream fileStream_;
     Unhv3Status status;
     BondChunkHeader HV30_; ///< HV3 파일임을 의미
     uint            VERS_; ///< HV3 포맷의 버전 정보

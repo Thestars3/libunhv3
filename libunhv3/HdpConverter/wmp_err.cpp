@@ -75,12 +75,12 @@ QString WMP_err::getErrorMessage()
     }
 }
 
-void WMP_err::raise()
+void WMP_err::raise() const
 {
     throw *this;
 }
 
-const QtConcurrent::Exception* WMP_err::clone()
+QtConcurrent::Exception* WMP_err::clone() const
 {
     return new WMP_err(err_);
 }

@@ -23,7 +23,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 class BondChunkHeader
 {
 private:
-    QString chunkName_;    ///< 청크의 이름
+    QString chunkName_;       ///< 청크의 이름
     quint32 attrSize_;        ///< 속성 청크의 크기
     quint32 subChunkSize_;    ///< 모든 하위 청크의 크기의 합
     quint32 chunkDataSize_;   ///< 현재 청크의 데이타 크기

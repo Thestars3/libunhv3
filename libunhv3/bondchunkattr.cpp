@@ -2,7 +2,7 @@
 #include "bondchunkattr.hpp"
 
 /** hv3 포멧의 GUID 타입을 QUuid 타입으로 저장합니다.\n
-  마이크로스트社에서 UUID 표준을 구현한 것이 GUID이며, 메모리 구조상으로 UUID와 동일하다.
+  마이크로스트社에서 UUID 표준을 구현한 것이 GUID이며, 데이터 구조상으로 UUID와 동일하다.
   @return QUuid
   */
 QUuid BondChunkAttr::fromGuid()
@@ -14,6 +14,7 @@ QUuid BondChunkAttr::fromGuid()
     quint32 u32;
     quint16 u16;
     quint8 u8;
+
     dataStream.readBytes(reinterpret_cast<char*&>(attrData_), attrDataSize_);
     dataStream >> u32;
     l = u32;
@@ -25,6 +26,7 @@ QUuid BondChunkAttr::fromGuid()
         dataStream >> u8;
         b[i] = u8;
     }
+
     return QUuid(l, w1, w2, b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]);
 }
 

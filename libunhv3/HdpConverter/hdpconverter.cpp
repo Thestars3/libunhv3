@@ -1,6 +1,5 @@
 #include <JXRTest.h>
 #include <QDataStream>
-#include "wmp_err.hpp"
 #include "hdpconverter.hpp"
 
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
@@ -242,10 +241,10 @@ HdpConverter* HdpConverter::setData(
     Call(pEncoder->WriteSource(pEncoder, pConverter, &rect));
 
     // < -- 인코더 할당 해제 -- >
-    Call(pEncoder->Release(&pEncoder));
+    pEncoder->Release(&pEncoder);
 
     // < -- 디코더 할당 해제 -- >
-    Call(pDecoder->Release(&pDecoder));
+    pDecoder->Release(&pDecoder);
 
 Cleanup:
     if ( Failed(err) ) {
