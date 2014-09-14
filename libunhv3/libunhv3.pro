@@ -27,7 +27,8 @@ HEADERS  += \
     ufp.hpp \
     filedatastorage.hpp \
     filedata.hpp \
-    hdpconverter.hpp
+    hdpconverter.hpp \
+    wmp_err.hpp
 
 SOURCES  += \
 	unhv3.cpp \
@@ -38,7 +39,8 @@ SOURCES  += \
     ufp.cpp \
     filedatastorage.cpp \
     filedata.cpp \
-    hdpconverter.cpp
+    hdpconverter.cpp \
+    wmp_err.cpp
 
 DEFINES  += \
 	UNHV3_LIBRARY

@@ -1,10 +1,13 @@
-#include <QByteArray>
+#include <JXRTest.h>
+#include <QDataStream>
+#include "wmp_err.hpp"
 #include "hdpconverter.hpp"
 
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 
 ERR HdpConverter::PKCodecFactory_CreateDecoderFromMemory(
-        const QByteArray &source
+        const QByteArray &source,
+        PKImageDecode** ppDecoder
         )
 {
     ERR err = WMP_errSuccess;
@@ -12,87 +15,58 @@ ERR HdpConverter::PKCodecFactory_CreateDecoderFromMemory(
     const PKIID *pIID = nullptr;
 
     struct WMPStream *pStream = nullptr;
+    PKImageDecode *pDecoder = nullptr;
 
     // get decode PKIID
-    GetImageDecodeIID(pExt, &pIID);
+    Call(GetImageDecodeIID(".hdp", &pIID));
 
     // create stream
     Call(CreateWS_Memory(&pStream, static_cast<void*>(const_cast<char*>(source.data())), static_cast<size_t>(source.size())));
 
     // Create decoder
-    Call(PKCodecFactory_CreateCodec(pIID, reinterpret_cast<void**>(&pDecoder)));
+    Call(PKCodecFactory_CreateCodec(pIID, reinterpret_cast<void**>(ppDecoder)));
+    pDecoder = *ppDecoder;
 
     // attach stream to decoder
-    Call(pDecoder->Initialize(pDecoder, pStream));
+    Call(pDecoder->Initialize(pDecoder, pStream)); // 이 부분에서 이미지 데이터의 내용을 분석한다.
     pDecoder->fStreamOwner = !0;
 
 Cleanup:
     return err;
 }
 
-typedef struct tagBITMAPINFOHEADER{
-    U32 uSize;
-    I32 iWidth;
-    I32 iHeight;
-    I16 iPlanes;
-    I16 iBitCount;
-    U32 uCompression;
-    U32 uImageSize;
-    I32 iPelsPerMeterX;
-    I32 iPelsPerMeterY;
-    U32 uColorUsed;
-    U32 uColorImportant;
-} BITMAPINFOHEADER, *PBITMAPINFOHEADER;
-
 ERR HdpConverter::WriteQImageHeader(
-        PKImageEncode *pIE
+        PKImageEncode *pIE,
+        QImage &image
         )
 {
-    ERR err = WMP_errSuccess;
+    //JXR 라이브러리에서 사용하는 해상도 단위는 인치. QT에서 쓰는건 미터단위.
+    image.setDotsPerMeterX(inchConvertToMeter(pIE->fResX));
+    image.setDotsPerMeterY(inchConvertToMeter(pIE->fResY));
 
-    size_t cbLineS = 0;
-
-    struct WMPStream* pS = pIE->pStream;
-    BITMAPINFOHEADER bmpIH = {sizeof(bmpIH), 0, };
-
-    pIE->cbPixel = 3;
-    cbLineS = (pIE->cbPixel * pIE->uWidth + 3) / 4 * 4;
-
-    bmpIH.iWidth = pIE->uWidth;
-    bmpIH.iHeight = pIE->uHeight;
-    bmpIH.iPlanes = 1;
-    bmpIH.iBitCount = (I16)(8 * pIE->cbPixel);
-    bmpIH.uImageSize = (U32)(cbLineS * pIE->uHeight);
-    bmpIH.iPelsPerMeterX = (I32)(pIE->fResX * 39.37);
-    bmpIH.iPelsPerMeterY = (I32)(pIE->fResY * 39.37);
-
-    Call(pS->Write(pS, &bmpIH, sizeof(bmpIH)));
-
-//    pIE->offPixel = pIE->offStart + bmpFH.uOffBits;
+    //헤더 기록 완료
     pIE->fHeaderDone = !FALSE;
 
-Cleanup:
-    return err;
+    return WMP_errSuccess;
 }
 
-HdpConverter converter;
-
 ERR PKImageEncode_WritePixels_QImage(
-        PKImageEncode* pIE,
+        PKImageEncode *pIE,
         U32 cLine,
-        U8* pbPixel,
+        U8 *pbPixel,
         U32 cbStride
         )
 {
     ERR err = WMP_errSuccess;
 
+    QImage::Format format;
     size_t cbLineM = 0;
+    QByteArray *data = nullptr;
+    int size = pIE->uWidth * pIE->uHeight * 4;
 
-    // header
-    if (!pIE->fHeaderDone)
-    {
-        // WriteBMPHeader() also inits this object
-        converter.WriteQImageHeader(pIE);
+    // < -- header -- >
+    if ( ! pIE->fHeaderDone ) {
+        HdpConverter::singleton->WriteQImageHeader(pIE, HdpConverter::singleton->image);
     }
 
     // calculate line size in memory and in stream
@@ -100,50 +74,114 @@ ERR PKImageEncode_WritePixels_QImage(
 
     FailIf(cbStride < cbLineM, WMP_errInvalidParameter);
 
-    converter.image = QImage(pbPixel, pIE->uWidth, pIE->uHeight, cbStride, QImage::Format_RGB888);
+    if ( pIE->WMP.bHasAlpha ) {
+        format = QImage::Format_ARGB32_Premultiplied;
+        data = HdpConverter::convertRgbaToArgb(pbPixel, size);
+    }
+    else {
+        format = QImage::Format_RGB888;
+        data = &HdpConverter::singleton->imageRawData;
+        data->setRawData(reinterpret_cast<char*>(pbPixel), size);
+    }
+
+    HdpConverter::singleton->image = QImage(
+                reinterpret_cast<uchar*>(data->data()),
+                pIE->uWidth,
+                pIE->uHeight,
+                cbStride,
+                format
+                );
     pIE->idxCurrentLine += cLine;
 
 Cleanup:
     return err;
 }
 
-HdpConverter::HdpConverter()
+HdpConverter *HdpConverter::singleton = nullptr;
+
+/** 인스턴스를 얻습니다.\n
+  만약 인스턴스가 생성되어 있지 않다면 자동으로 생성합니다.
+  @return HdpConverter 인스턴스.
+  */
+HdpConverter* HdpConverter::getInstance()
 {
-    pExt = const_cast<char*>(".bmp");
-    pDecoder = nullptr;
+    if ( singleton == nullptr ) {
+        singleton = new HdpConverter();
+    }
+
+    return singleton;
 }
 
-/** 데이터를 읽어옴.
+/** 생성자.
   */
-void HdpConverter::loadHdpData(
-        const QByteArray &source
+HdpConverter::HdpConverter()
+{
+    // < -- 인스턴스 설정 -- >
+    singleton = this;
+}
+
+/** RGBA 순서의 바이트 배열을 ARGB 순서로 재배열한다.
+  @return 데이터 포인터를 반환한다. delete하지 말것.
+  */
+QByteArray* HdpConverter::convertRgbaToArgb(
+        uchar *rgbaData, ///< 재배열 할 데이터
+        uint size        ///< 바이트 수
         )
 {
+    QDataStream rgba;
+    QDataStream argb(&imageRawData, QIODevice::WriteOnly);
+
+    rgba.writeRawData(reinterpret_cast<char*>(rgbaData), size);
+
+    quint8 a = 0, rgb[3];
+    for(uint i = 0; i < size; i += 4) {
+        rgba.readRawData(reinterpret_cast<char*>(rgb), 3);
+        rgba.readRawData(reinterpret_cast<char*>(a), 1);
+        argb.writeRawData(reinterpret_cast<char*>(a), 1);
+        argb.writeRawData(reinterpret_cast<char*>(rgb), 3);
+    }
+
+    return &imageRawData;
+}
+
+/** HdpConverter를 할당 해제합니다.
+  */
+void HdpConverter::relrease()
+{
+    delete this;
+}
+
+/** 소멸자.
+  */
+HdpConverter::~HdpConverter()
+{
+    singleton = nullptr;
+}
+
+/** HDP 포멧 형식의 파일 데이터를 읽어옵니다.
+  @return HdpConverter 인스턴스.
+  @throw 오류가 존재할 경우 WMP_err를 던집니다. 오류를 받기 위해서는 wmp_err.hpp 헤더 파일이 필요합니다. Commit or rollback semantics.
+  */
+HdpConverter* HdpConverter::setData(
+        const QByteArray &hdpData
+        )
+{
+    ERR err = WMP_errSuccess;
+
+    PKImageDecode *pDecoder = nullptr;
     PKFactory *pFactory = nullptr;
     PKCodecFactory *pCodecFactory = nullptr;
-    CWMIStrCodecParam wmiSCP;
+    WMPStream *pEncodeStream = nullptr; // 인코드 스트림
+    PKImageEncode *pEncoder = nullptr; // 인코더
+    PKFormatConverter *pConverter = nullptr; // 컨버터
+    PKPixelFormatGUID guidPixFormat;
+    PKRect rect = {0, 0, 0, 0}; // 크기
 
-    PKPixelFormatGUID guidPixFormat = GUID_PKPixelFormat24bppRGB;
+    Call(PKCreateFactory(&pFactory, PK_SDK_VERSION));
+    Call(PKCreateCodecFactory(&pCodecFactory, WMP_SDK_VERSION));
+    Call(PKCodecFactory_CreateDecoderFromMemory(hdpData, &pDecoder));
 
-    PKCreateFactory(&pFactory, PK_SDK_VERSION);
-    PKCreateCodecFactory(&pCodecFactory, WMP_SDK_VERSION);
-    PKCodecFactory_CreateDecoderFromMemory(source);
-
-    // < -- set color format -- >
-    {
-        PKPixelInfo PI; // 화소 정보
-        PI.pGUIDPixFmt = &guidPixFormat;
-        PixelFormatLookup(&PI, LOOKUP_FORWARD);
-
-        pDecoder->WMP.wmiSCP.bfBitstreamFormat = SPATIAL; // spatial order
-        pDecoder->WMP.wmiSCP.uAlphaMode = 0; // no alpha
-        pDecoder->WMP.wmiSCP.sbSubband = SB_ALL; // All subbands included
-        pDecoder->WMP.bIgnoreOverlap = FALSE;
-
-        pDecoder->WMP.wmiI.cfColorFormat = PI.cfColorFormat; // 색상 형식
-        pDecoder->WMP.wmiI.bdBitDepth = PI.bdBitDepth; // 색 깊이
-        pDecoder->WMP.wmiI.cBitsPerUnit = PI.cbitUnit; // 비트 단위 유닛
-    }
+    pDecoder->WMP.bIgnoreOverlap = FALSE;
 
     // < -- Validate thumbnail decode parameters -- >
     pDecoder->WMP.wmiI.cThumbnailWidth = pDecoder->WMP.wmiI.cWidth;
@@ -165,66 +203,76 @@ void HdpConverter::loadHdpData(
     // < -- 작업 현황 보고 설정 -- >
     pDecoder->WMP.wmiSCP.bVerbose = FALSE; // 보고 안함
 
-    // < -- 프레임 디코딩 -- >
-    {
-        // jxrlib 1.1에 프레임 수 세기, 프레임 선택 등과 같은 기능은 미구현된 상태임.
-        //pDecoder->GetFrameCount(pDecoder, &cFrame); // 두 가지 스타일(다중 페이지 및 다중 해상도)로 표시되는 다중 프레임 이미지에 대한 정보를 반환합니다.
-        //Call(pDecoder->SelectFrame(pDecoder, i + 1));
-        struct WMPStream *pEncodeStream = nullptr; // 인코드 스트림
-        PKImageEncode *pEncoder = nullptr; // 인코더
-        PKFormatConverter *pConverter = nullptr; // 컨버터
-
-        Float rX = 0.0, rY = 0.0; // 해상도
-        PKRect rect = {0, 0, 0, 0}; // 크기
-
-        // < -- 컨버터 초기화 -- >
-        pCodecFactory->CreateFormatConverter(&pConverter);
-        pConverter->Initialize(pConverter, pDecoder, pExt, guidPixFormat);
-
-        // < -- 인코더 준비 -- >
-        pFactory->CreateStreamFromMemory(&pEncodeStream, nullptr, 0); //의미 없음. 함수 포인터에 저절한 더미 함수를 배치 하기 위한 작업. 실질적 스트리밍 작업은 QImage, Qbuffer가 처리한다.
-        pEncoder->WritePixels = PKImageEncode_WritePixels_QImage;
-        if(pEncoder->bWMP) {
-            pEncoder->Initialize(pEncoder, pEncodeStream, &wmiSCP, sizeof(wmiSCP));
-        } else {
-            pEncoder->Initialize(pEncoder, pEncodeStream, NULL, 0);
-        }
-
-        // < -- 출력 화소 포멧 설정 -- >
-        pEncoder->SetPixelFormat(pEncoder, guidPixFormat);
-        pEncoder->WMP.wmiSCP.bBlackWhite = pDecoder->WMP.wmiSCP.bBlackWhite;
-
-        // < -- 출력 이미지 크기 설정 -- >
-        rect.Width = static_cast<I32>(pDecoder->WMP.wmiI.cROIWidth);
-        rect.Height = static_cast<I32>(pDecoder->WMP.wmiI.cROIHeight);
-        pEncoder->SetSize(pEncoder, rect.Width, rect.Height);
-
-        // < -- 출력 해상도 설정 -- >
-        pDecoder->GetResolution(pDecoder, &rX, &rY); // 디코더의 해상도를 가져옵니다.
-        pEncoder->SetResolution(pEncoder, rX, rY); // 인코더의 해상도를 디코더의 해상도로 설정합니다.
-
-        // < -- 변환된 내용을 기록 -- >
-        pEncoder->WriteSource = PKImageEncode_Transcode;
-        pEncoder->WriteSource(pEncoder, pConverter, &rect);
-
-        // < -- 인코더 할당 해제 -- >
-        pEncoder->Release(&pEncoder);
+    // < -- 알파값 유무에 따른 포멧 선택 -- >
+    if ( pDecoder->WMP.bHasAlpha ) {
+        guidPixFormat = GUID_PKPixelFormat32bppRGBA;
+    }
+    else {
+        guidPixFormat = GUID_PKPixelFormat32bppRGB;
     }
 
+    // < -- 컨버터 초기화 -- >
+    Call(pCodecFactory->CreateFormatConverter(&pConverter));
+    Call(pConverter->Initialize(pConverter, pDecoder, nullptr, guidPixFormat)); // 널 포인터를 인자로 주어 확장자에 따른 픽셀 포멧 지정을 막음.
+
+    // < -- 인코더 준비 -- >
+    Call(pFactory->CreateStreamFromMemory(&pEncodeStream, nullptr, 0)); //의미 없음. 함수 포인터에 저절한 더미 함수를 배치 하기 위한 작업.
+    Call(PKImageEncode_Create(&pEncoder));
+    pEncoder->WritePixels = PKImageEncode_WritePixels_QImage;
+    pEncoder->Initialize(pEncoder, pEncodeStream, nullptr, 0);
+
+    // < -- 출력 화소 포멧 설정 -- >
+    Call(pEncoder->SetPixelFormat(pEncoder, guidPixFormat));
+    pEncoder->WMP.wmiSCP.bBlackWhite = pDecoder->WMP.wmiSCP.bBlackWhite;
+
+    // < -- 출력 이미지 크기 설정 -- >
+    rect.Width = static_cast<I32>(pDecoder->WMP.wmiI.cROIWidth);
+    rect.Height = static_cast<I32>(pDecoder->WMP.wmiI.cROIHeight);
+    Call(pEncoder->SetSize(pEncoder, rect.Width, rect.Height));
+
+    // < -- 출력 해상도 설정 -- >
+    {
+        Float rX = 0.0, rY = 0.0; // 해상도
+        Call(pDecoder->GetResolution(pDecoder, &rX, &rY)); // 디코더의 해상도를 가져옵니다.
+        Call(pEncoder->SetResolution(pEncoder, rX, rY)); // 인코더의 해상도를 디코더의 해상도로 설정합니다.
+    }
+
+    // < -- 변환된 내용을 기록 -- >
+    pEncoder->WriteSource = PKImageEncode_Transcode;
+    Call(pEncoder->WriteSource(pEncoder, pConverter, &rect));
+
+    // < -- 인코더 할당 해제 -- >
+    Call(pEncoder->Release(&pEncoder));
+
     // < -- 디코더 할당 해제 -- >
-    pDecoder->Release(&pDecoder);
+    Call(pDecoder->Release(&pDecoder));
+
+Cleanup:
+    if ( Failed(err) ) {
+        throw WMP_err(err);
+    }
+
+    return this;
 }
 
-void HdpConverter::toJpeg(
+/** 알파 채널이 포함되었는지 확인한다.
+  @return 알파값 포함 여부. true : 포함됨. false : 없음.
+  */
+bool HdpConverter::hasAlphaChannel()
+{
+    return image.hasAlphaChannel();
+}
+
+bool HdpConverter::saveToJpeg(
         const QString &filePath ///< 저장 경로
         )
 {
-    image.save(filePath, "JPEG", 0);
+    return image.save(filePath, "JPEG", 100);
 }
 
-void HdpConverter::toPng(
+bool HdpConverter::saveToPng(
         const QString &filePath ///< 저장 경로
         )
 {
-    image.save(filePath, "PNG");
+    return image.save(filePath, "PNG");
 }

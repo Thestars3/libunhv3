@@ -22,7 +22,5 @@ QDataStream& operator>>(
 
 FileInfoList::~FileInfoList()
 {
-    for(QVector<FileInfo*>::Iterator it = fileInfoList_.end() - 1; it == fileInfoList_.begin(); it--) {
-        delete *it;
-    }
+    qDeleteAll(fileInfoList_);
 }

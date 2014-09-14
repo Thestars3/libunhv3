@@ -36,4 +36,15 @@
 
 ### v0.4.0
 
-+ `HDP -> BMP -> JPEG'를 `HDP -> JPEG(.PNG)' 순서로 변환 되도록 개선.
++ \`HDP -> BMP -> JPEG'를 \`HDP -> JPEG(.PNG)' 순서로 변환 되도록 개선.
+
+#### v0.5.0
+
++ HdpConvert를 완성.
+	+ HdpConvert::toJpeg 메소드 사용시 JPEG 파일의 화질이 손상되어 저장되던 문제 수정.
+	+ HdpConvert를 싱글톤 객체로 수정.
+	+ HdpConvert relrease 메소드를 추가하고, 외부에서 소멸자를 호출 할 수 없도록 수정.
+	+ HdpConvert::hasAlphaChannel 메소드를 추가. 알파값 포함 여부를 확인 할 수 있도록함.
+	+ 변환부에서 알파채널 존재 여부에 따라 데이터를 기록하도록 수정.
+	+ jxrlib에서 반환되는 오류를 처리하는 부분 추가.
+	+ 오류 처리를 위한 WMP_err 클래스를 추가.

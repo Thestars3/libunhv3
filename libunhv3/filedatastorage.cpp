@@ -2,9 +2,7 @@
 
 FileDataStorage::~FileDataStorage()
 {
-    for(QVector<FileData*>::Iterator it = fileDataStorage_.end() - 1; it == fileDataStorage_.begin(); it--) {
-        delete *it;
-    }
+    qDeleteAll(fileDataStorage_);
 }
 
 /** FileDataStorage 역직렬화 수행자.
