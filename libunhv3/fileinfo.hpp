@@ -32,7 +32,7 @@ private:
 public:
     // < -- Getter -- >
     BondChunkHeader FINF();
-    QString NAME();
+    QString NAME() const;
     uint POS4() const;
     uint CRC3();
     uint COMP();

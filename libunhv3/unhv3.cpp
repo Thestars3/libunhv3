@@ -4,7 +4,8 @@
 #include "bondchunkattr.hpp"
 #include "unhv3.hpp"
 
-Unhv3::Unhv3()
+Unhv3::Unhv3() :
+    pwd(QDir::currentPath())
 {
     status = Unhv3Status::NO_ERROR;
 }
@@ -36,7 +37,20 @@ bool Unhv3::extractAllTo(
         return false;
     }
 
-    return false;
+    if ( chdir(savePath.toUtf8().constData()) == -1 ) {
+        return false;
+    }
+
+    int max = getFileItemCount();
+    pwd.cd(savePath);
+    for(int i = 0; i < max; i++) {
+        const FileInfo *fileInfo = getFileItem(i);
+        QString fileName = fileInfo->NAME();
+        extractOneTo(i, fileName);
+    }
+    pwd.cd(".");
+
+    return true;
 }
 
 /** 압축파일 내의 파일 아이템 갯수를 리턴합니다.

@@ -28,7 +28,7 @@ BondChunkHeader FileInfo::FINF()
 /** 파일명을 얻습니다.
   @return 파일명
   */
-QString FileInfo::NAME()
+QString FileInfo::NAME() const
 {
     return NAME_;
 }

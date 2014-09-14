@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 #ifndef UNHV3_HPP
 #define UNHV3_HPP
 
+#include <QDir>
 #include <QFile>
 #include <QUuid>
 #include <QString>
@@ -42,6 +43,7 @@ public:
     const FileInfo* getFileItem(int index);
 
 private:
+    QDir pwd;
     QFile file;
     QDataStream fileStream_;
     Unhv3Status status;
