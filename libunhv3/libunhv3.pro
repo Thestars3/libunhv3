@@ -40,7 +40,8 @@ SOURCES  += \
     filedatastorage.cpp \
     filedata.cpp \
     hdpconverter.cpp \
-    wmp_err.cpp
+    wmp_err.cpp \
+    unhv3status.cpp
 
 DEFINES  += \
 	UNHV3_LIBRARY
