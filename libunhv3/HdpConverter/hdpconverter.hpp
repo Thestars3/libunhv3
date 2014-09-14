@@ -22,6 +22,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 
 typedef struct tagPKImageEncode PKImageEncode;
 typedef struct tagPKImageDecode PKImageDecode;
+typedef struct tagPKFormatConverter PKFormatConverter;
+typedef struct tagPKRect PKRect;
 typedef uint U32;
 typedef uchar U8;
 
@@ -34,16 +36,14 @@ typedef uchar U8;
 class HdpConverter
 {
 private:
-    static HdpConverter *singleton;
     QImage image;
-    static QByteArray imageRawData;
-    HdpConverter();
-    ~HdpConverter();
+    QByteArray saveSpace;
     void initConverter(const QByteArray &hdpData);
-    friend ERR PKImageEncode_WritePixels_QImage(PKImageEncode *pIE, U32 cLine, U8 *pbPixel, U32 cbStride);
+    static ERR PKImageEncode_Transcode(PKImageEncode *pIE, PKFormatConverter *pFC, PKRect *pRect, QImage &image, QByteArray &saveSpace);
+    static ERR PKImageEncode_WritePixels_QImage(PKImageEncode *pIE, U32 cLine, U8 *pbPixel, U32 cbStride, QImage &image, QByteArray &saveSpace);
     static ERR PKCodecFactory_CreateDecoderFromMemory(const QByteArray &source, PKImageDecode **ppDecoder);
     static ERR WriteQImageHeader(PKImageEncode *pIE, QImage &image);
-    static QByteArray* convertRgbaToArgb(uchar *rgbaData, uint size);
+    static void convertRgbaToArgb(uchar *rgbaData, uint size, QByteArray &saveSpace);
 
     /** inch 단위를 미터 단위로 바꿉니다.
       @return 미터 단위로된 값
@@ -57,15 +57,11 @@ private:
     }
 
 public:
-    void relrease();
     bool hasAlphaChannel();
-    static HdpConverter* getInstance();
-    HdpConverter* setData(const QByteArray &hdpData);
+    HdpConverter& setData(const QByteArray &hdpData);
     bool saveToJpeg(const QString &filePath);
     bool saveToPng(const QString &filePath);
 
 };
-
-ERR PKImageEncode_WritePixels_QImage(PKImageEncode *pIE, U32 cLine, U8 *pbPixel, U32 cbStride);
 
 #endif // HDPCONVERTER_HPP

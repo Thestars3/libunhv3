@@ -32,7 +32,7 @@ int FileInfoList::getFileItemCount()
 
 const FileInfo* FileInfoList::getFileItem(
         int index
-        )
+        ) const
 {
     return fileInfoList_.at(index);
 }

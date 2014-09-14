@@ -64,3 +64,11 @@
 ### v0.7.0
 
 + 전체 압축 해제 메소드 Unhv3::extractAllTo를 추가.
+
+#### v0.7.1
+
++ HdpConvert를 일반 클래스로 수정.
++ Unhv3Status::NOT_YET_IMPELEMENTED 오류를 추가.
++ Unhv3::close 메소드의 용도를 변경.
+	+ Unhv3::close 메소드의 이름를 Unhv3::clear로 수정.
+	+ Unhv3::open 시 close메소드가 호출되지 않도록 변경.

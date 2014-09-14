@@ -32,18 +32,26 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
   <a href="http://www.kippler.com/doc/bond/BondFormat.txt">BondFormat Specification v1.0</a>를 참고하여 만들었습니다.\n
   고정된 청크 배치를 읽어도록 하였으므로, 속성의 개수나 위치가 바뀐다면 소스를 수정해야 합니다.\n
   */
-class UNHV3SHARED_EXPORT Unhv3 {
+class UNHV3SHARED_EXPORT Unhv3
+{
 public:
     Unhv3();
+    ~Unhv3();
     bool open(const QString &filepath);
     bool extractAllTo(const QString &savePath);
     Unhv3Status getLastError();
     int getFileItemCount();
     bool extractOneTo(int index, const QString &savePath);
-    const FileInfo* getFileItem(int index);
+    const FileInfo* getFileItem(int index) const;
+    bool testArchive();
+    bool extractOneAs(int index, const QString &filePathName);
+    bool isOpened();
+    void clear();
+    bool isBrokenArchive();
+    QString filePathName();
 
 private:
-    QDir pwd;
+    class HdpConverter *converter;
     QFile file;
     QDataStream fileStream_;
     Unhv3Status status;

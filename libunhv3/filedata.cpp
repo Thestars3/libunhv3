@@ -24,7 +24,7 @@ QDataStream& operator>>(
 /** 파일 데이터 청크를 얻습니다.
   @return 파일 데이터 청크
   */
-BondChunkHeader FileData::FILE()
+BondChunkHeader FileData::FILE() const
 {
     return FILE_;
 }

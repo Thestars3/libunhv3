@@ -44,7 +44,7 @@ uint FileInfo::POS4() const
 /** 파일 데이터에 대한 CRC32를 얻습니다.
   @return 파일 데이터에 대한 CRC32
   */
-uint FileInfo::CRC3()
+uint FileInfo::CRC3() const
 {
     return CRC3_;
 }
@@ -52,7 +52,8 @@ uint FileInfo::CRC3()
 /** 파일에 대한 압축 방법을 얻습니다(0: 저장, 1~: 예약됨).
   @return 파일에 대한 압축 방법
   */
-uint FileInfo::COMP()
+uint FileInfo::COMP() const
 {
     return COMP_;
 }
+

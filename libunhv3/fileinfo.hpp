@@ -34,8 +34,8 @@ public:
     BondChunkHeader FINF();
     QString NAME() const;
     uint POS4() const;
-    uint CRC3();
-    uint COMP();
+    uint CRC3() const;
+    uint COMP() const;
 
 };
 

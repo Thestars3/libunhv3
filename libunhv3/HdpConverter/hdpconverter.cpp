@@ -49,23 +49,24 @@ ERR HdpConverter::WriteQImageHeader(
     return WMP_errSuccess;
 }
 
-ERR PKImageEncode_WritePixels_QImage(
+ERR HdpConverter::PKImageEncode_WritePixels_QImage(
         PKImageEncode *pIE,
         U32 cLine,
         U8 *pbPixel,
-        U32 cbStride
+        U32 cbStride,
+        QImage &image,
+        QByteArray &saveSpace
         )
 {
     ERR err = WMP_errSuccess;
 
     QImage::Format format;
     size_t cbLineM = 0;
-    QByteArray *data = nullptr;
     int size = pIE->uWidth * pIE->uHeight * 4;
 
     // < -- header -- >
     if ( ! pIE->fHeaderDone ) {
-        HdpConverter::singleton->WriteQImageHeader(pIE, HdpConverter::singleton->image);
+        WriteQImageHeader(pIE, image);
     }
 
     // calculate line size in memory and in stream
@@ -75,16 +76,15 @@ ERR PKImageEncode_WritePixels_QImage(
 
     if ( pIE->WMP.bHasAlpha ) {
         format = QImage::Format_ARGB32_Premultiplied;
-        data = HdpConverter::convertRgbaToArgb(pbPixel, size);
+        convertRgbaToArgb(pbPixel, size, saveSpace);
     }
     else {
         format = QImage::Format_RGB888;
-        data = &HdpConverter::singleton->imageRawData;
-        data->setRawData(reinterpret_cast<char*>(pbPixel), size);
+        saveSpace.setRawData(reinterpret_cast<char*>(pbPixel), size);
     }
 
-    HdpConverter::singleton->image = QImage(
-                reinterpret_cast<uchar*>(data->data()),
+    image = QImage(
+                reinterpret_cast<uchar*>(saveSpace.data()),
                 pIE->uWidth,
                 pIE->uHeight,
                 cbStride,
@@ -96,39 +96,16 @@ Cleanup:
     return err;
 }
 
-HdpConverter *HdpConverter::singleton = nullptr;
-
-/** 인스턴스를 얻습니다.\n
-  만약 인스턴스가 생성되어 있지 않다면 자동으로 생성합니다.
-  @return HdpConverter 인스턴스.
-  */
-HdpConverter* HdpConverter::getInstance()
-{
-    if ( singleton == nullptr ) {
-        singleton = new HdpConverter();
-    }
-
-    return singleton;
-}
-
-/** 생성자.
-  */
-HdpConverter::HdpConverter()
-{
-    // < -- 인스턴스 설정 -- >
-    singleton = this;
-}
-
 /** RGBA 순서의 바이트 배열을 ARGB 순서로 재배열한다.
-  @return 데이터 포인터를 반환한다. delete하지 말것.
   */
-QByteArray* HdpConverter::convertRgbaToArgb(
+void HdpConverter::convertRgbaToArgb(
         uchar *rgbaData, ///< 재배열 할 데이터
-        uint size        ///< 바이트 수
+        uint size,       ///< 바이트 수
+        QByteArray &saveSpace
         )
 {
     QDataStream rgba;
-    QDataStream argb(&imageRawData, QIODevice::WriteOnly);
+    QDataStream argb(&saveSpace, QIODevice::WriteOnly);
 
     rgba.writeRawData(reinterpret_cast<char*>(rgbaData), size);
 
@@ -139,29 +116,13 @@ QByteArray* HdpConverter::convertRgbaToArgb(
         argb.writeRawData(reinterpret_cast<char*>(a), 1);
         argb.writeRawData(reinterpret_cast<char*>(rgb), 3);
     }
-
-    return &imageRawData;
-}
-
-/** HdpConverter를 할당 해제합니다.
-  */
-void HdpConverter::relrease()
-{
-    delete this;
-}
-
-/** 소멸자.
-  */
-HdpConverter::~HdpConverter()
-{
-    singleton = nullptr;
 }
 
 /** HDP 포멧 형식의 파일 데이터를 읽어옵니다.
-  @return HdpConverter 인스턴스.
+  @return HdpConverter 객체 참조자.
   @throw 오류가 존재할 경우 WMP_err를 던집니다. 오류를 받기 위해서는 wmp_err.hpp 헤더 파일이 필요합니다. Commit or rollback semantics.
   */
-HdpConverter* HdpConverter::setData(
+HdpConverter& HdpConverter::setData(
         const QByteArray &hdpData
         )
 {
@@ -217,7 +178,7 @@ HdpConverter* HdpConverter::setData(
     // < -- 인코더 준비 -- >
     Call(pFactory->CreateStreamFromMemory(&pEncodeStream, nullptr, 0)); //의미 없음. 함수 포인터에 저절한 더미 함수를 배치 하기 위한 작업.
     Call(PKImageEncode_Create(&pEncoder));
-    pEncoder->WritePixels = PKImageEncode_WritePixels_QImage;
+    //pEncoder->WritePixels = PKImageEncode_WritePixels_QImage;
     pEncoder->Initialize(pEncoder, pEncodeStream, nullptr, 0);
 
     // < -- 출력 화소 포멧 설정 -- >
@@ -237,8 +198,9 @@ HdpConverter* HdpConverter::setData(
     }
 
     // < -- 변환된 내용을 기록 -- >
-    pEncoder->WriteSource = PKImageEncode_Transcode;
-    Call(pEncoder->WriteSource(pEncoder, pConverter, &rect));
+    //pEncoder->WriteSource = PKImageEncode_Transcode;
+    //Call(pEncoder->WriteSource(pEncoder, pConverter, &rect));
+    PKImageEncode_Transcode(pEncoder, pConverter, &rect, image, saveSpace);
 
     // < -- 인코더 할당 해제 -- >
     pEncoder->Release(&pEncoder);
@@ -251,7 +213,80 @@ Cleanup:
         throw WMP_err(err);
     }
 
-    return this;
+    return *this;
+}
+
+ERR HdpConverter::PKImageEncode_Transcode(
+        PKImageEncode *pIE,
+        PKFormatConverter *pFC,
+        PKRect *pRect,
+        QImage &image,
+        QByteArray &saveSpace
+        )
+{
+    ERR err = WMP_errSuccess;
+
+    PKPixelFormatGUID enPFFrom = GUID_PKPixelFormatDontCare;
+    PKPixelFormatGUID enPFTo = GUID_PKPixelFormatDontCare;
+
+    PKPixelInfo pPIFrom;
+    PKPixelInfo pPITo;
+
+    U32 cbStrideTo = 0;
+    U32 cbStrideFrom = 0;
+    U32 cbStride = 0;
+
+    U8* pb = nullptr;
+
+    CWMTranscodingParam cParam = {0};
+
+    // get pixel format
+    Call(pFC->GetSourcePixelFormat(pFC, &enPFFrom));
+    Call(pFC->GetPixelFormat(pFC, &enPFTo));
+
+    // calc common stride
+    pPIFrom.pGUIDPixFmt = &enPFFrom;
+    PixelFormatLookup(&pPIFrom, LOOKUP_FORWARD);
+
+    pPITo.pGUIDPixFmt = &enPFTo;
+    PixelFormatLookup(&pPITo, LOOKUP_FORWARD);
+
+    cbStrideFrom = (BD_1 == pPIFrom.bdBitDepth ? ((pPIFrom.cbitUnit * pRect->Width + 7) >> 3) : (((pPIFrom.cbitUnit + 7) >> 3) * pRect->Width));
+    if (&GUID_PKPixelFormat12bppYUV420 == pPIFrom.pGUIDPixFmt || &GUID_PKPixelFormat16bppYUV422 == pPIFrom.pGUIDPixFmt) {
+        cbStrideFrom >>= 1;
+    }
+
+    cbStrideTo = (BD_1 == pPITo.bdBitDepth ? ((pPITo.cbitUnit * pIE->uWidth + 7) >> 3) : (((pPITo.cbitUnit + 7) >> 3) * pIE->uWidth));
+    if (&GUID_PKPixelFormat12bppYUV420 == pPITo.pGUIDPixFmt || &GUID_PKPixelFormat16bppYUV422 == pPITo.pGUIDPixFmt) {
+        cbStrideTo >>= 1;
+    }
+
+    cbStride = qMax(cbStrideFrom, cbStrideTo);
+
+    if(pIE->bWMP){
+        cParam.cLeftX = pFC->pDecoder->WMP.wmiI.cROILeftX;
+        cParam.cTopY = pFC->pDecoder->WMP.wmiI.cROITopY;
+        cParam.cWidth = pFC->pDecoder->WMP.wmiI.cROIWidth;
+        cParam.cHeight = pFC->pDecoder->WMP.wmiI.cROIHeight;
+        cParam.oOrientation = pFC->pDecoder->WMP.wmiI.oOrientation;
+        cParam.uAlphaMode = pFC->pDecoder->WMP.wmiSCP.uAlphaMode;
+        cParam.bfBitstreamFormat = pFC->pDecoder->WMP.wmiSCP.bfBitstreamFormat;
+        cParam.sbSubband = pFC->pDecoder->WMP.wmiSCP.sbSubband;
+        cParam.bIgnoreOverlap = pFC->pDecoder->WMP.bIgnoreOverlap;
+
+        Call(pIE->Transcode(pIE, pFC->pDecoder, &cParam));
+    }
+    else {
+        // actual dec/enc with local buffer
+        Call(PKAllocAligned((void **) &pb, cbStride * pRect->Height, 128));
+        Call(pFC->Copy(pFC, pRect, pb, cbStride));
+        //Call(pIE->WritePixels(pIE, pRect->Height, pb, cbStride));
+        Call(PKImageEncode_WritePixels_QImage(pIE, pRect->Height, pb, cbStride, image, saveSpace));
+    }
+
+Cleanup:
+    PKFreeAligned(reinterpret_cast<void**>(&pb));
+    return err;
 }
 
 /** 알파 채널이 포함되었는지 확인한다.

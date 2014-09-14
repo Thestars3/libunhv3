@@ -34,7 +34,7 @@ private:
 public:
     // < -- Getter -- >
     quint64 pos();
-    BondChunkHeader FILE();
+    BondChunkHeader FILE() const;
     QByteArray* raw_data() const;
 
 };

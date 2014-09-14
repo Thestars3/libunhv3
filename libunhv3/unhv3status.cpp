@@ -37,7 +37,10 @@ QString Unhv3Status::getMessage()
     case SAVEPATH_IS_NOT_DIR:
         return QString::fromUtf8("지정된 저장 경로는 폴더가 아닙니다.");
 
+    case NOT_YET_IMPELEMENTED:
+        return QString::fromUtf8("아직 구현되지 않은 기능을 사용하려 했습니다.");
+
     default:
-        return QString::fromUtf8("잘못된 오류 코드입니다.");
+        return QString::fromUtf8("알 수 없는 오류 코드입니다.");
     }
 }

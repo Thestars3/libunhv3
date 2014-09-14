@@ -29,7 +29,7 @@ private:
     friend QDataStream& operator>>(QDataStream &in, FileInfoList &fileInfoList);
 
 public:
-    const FileInfo* getFileItem(int index);
+    const FileInfo* getFileItem(int index) const;
     int getFileItemCount();
     ~FileInfoList();
 
