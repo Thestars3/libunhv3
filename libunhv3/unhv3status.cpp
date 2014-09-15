@@ -44,3 +44,10 @@ QString Unhv3Status::getMessage()
         return QString::fromUtf8("알 수 없는 오류 코드입니다.");
     }
 }
+
+Unhv3Status::Unhv3Status(
+        Status status
+        ) :
+    status_(status)
+{
+}

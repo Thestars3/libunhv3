@@ -4,9 +4,24 @@
 #include "bondchunkattr.hpp"
 #include "unhv3.hpp"
 
-Unhv3::Unhv3()
+Unhv3::Unhv3() :
+    openStatus(false),
+    status(Unhv3Status::NO_ERROR),
+    VERS_(0),
+    FSIZ_(0),
+    DIRE_(0),
+    ENCR_(0),
+    COPY_(QString::null),
+    LINK_(QString::null),
+    TITL_(QString::null),
+    ISBN_(QString::null),
+    WRTR_(QString::null),
+    PUBL_(QString::null),
+    DATE_(QString::null),
+    COMT_(QString::null),
+    MAKR_(QString::null),
+    GENR_(QString::null)
 {
-    status = Unhv3Status::NO_ERROR;
     converter = new HdpConverter();
 }
 
@@ -18,36 +33,55 @@ Unhv3::~Unhv3()
 /** 마지막으로 발생한 오류의 상세 내용을 확인한다.
   @return 상태코드.
   */
-Unhv3Status Unhv3::getLastError()
+Unhv3Status Unhv3::lastError() const
 {
     return status;
 }
 
+/** 메모리로 직접 해제해 보면서 파일의 손상 여부를 확인합니다.
+  @return 파일의 손상여부
+  */
 bool Unhv3::testArchive()
 {
     status = Unhv3Status::NOT_YET_IMPELEMENTED;
     return false;
 }
 
+/** open 메소드로 파일을 분석 할때, 체크썸이 올바른지 확인합니다.
+  @return 파일 손상 여부
+  */
 bool Unhv3::isBrokenArchive()
 {
     status = Unhv3Status::NOT_YET_IMPELEMENTED;
     return false;
 }
 
-QString Unhv3::filePathName()
+/** 현재 열려있는 파일의 경로명을 리턴합니다.
+  @return 파일의 경로명. 열려있지 않으면 QString::null을 리턴.
+  */
+QString Unhv3::filePathName() const
 {
-    return file.fileName();
+    if ( isOpened() ) {
+        return file.fileName();
+    } else {
+        return QString::null;
+    }
 }
 
-bool Unhv3::isOpened()
+/** 현재 파일이 열려있는 상태인지 여부를 확인합니다.
+  @return true : 열림; false : 안열림.
+  */
+bool Unhv3::isOpened() const
 {
-    return file.isOpen();
+    return openStatus;
 }
 
+/** 이 객체의 내용을 초기화합니다.
+  */
 void Unhv3::clear()
 {
     file.close();
+    openStatus = false;
     delete converter;
     converter = new HdpConverter();
     HV30_ = BondChunkHeader();
@@ -96,7 +130,7 @@ bool Unhv3::extractAllTo(
         return false;
     }
 
-    int max = getFileItemCount();
+    int max = fileItemCount();
     QDir pwd = QDir::currentPath();
     pwd.cd(savePath);
     for(int i = 0; i < max; i++) {
@@ -109,21 +143,163 @@ bool Unhv3::extractAllTo(
     return true;
 }
 
-/** 압축파일 내의 파일 아이템 갯수를 리턴합니다.
+/** 현재 열려있는 파일의 파일 크기를 리턴합니다.
+  @return 압축파일의 파일 크기.
+  */
+uint Unhv3::archiveFileSize() const
+{
+    return FSIZ_;
+}
+
+/** 현재 열려있는 파일의 HV3 포맷의 버전 정보를 리턴합니다.
+  @return HV3 포맷의 버전 정보
+  */
+uint Unhv3::formatVersion() const
+{
+    return VERS_;
+}
+
+/** 현재 열려있는 파일의 GUID를 리턴합니다.
+  @return 파일의 GUID
+  */
+QUuid Unhv3::archiveGuid() const
+{
+    return GUID_;
+}
+
+/** 현재 열려있는 파일의 UUID를 리턴합니다.
+  @return 파일의 UUID
+  */
+QUuid Unhv3::archiveUuid() const
+{
+    return UUID_;
+}
+
+/** 현재 열려있는 파일의 만들어진 시간을 리턴합니다.
+  @return 파일이 만들어진 시간
+  */
+QDateTime Unhv3::createdTime() const
+{
+    return FTIM_;
+}
+
+/** 현재 열려있는 파일의 책의 제본방식을 리턴합니다.
+  @return 책의 제본방식 0: 정보없음, 1:left to right 2:right to left
+  */
+uint Unhv3::direction() const
+{
+    return DIRE_;
+}
+
+/** 현재 열려있는 파일의 암호화 방식을 리턴합니다.
+  @return 파일의 암호화 방식, 0:암호화 없음
+  */
+uint Unhv3::encryptMethod() const
+{
+    return ENCR_;
+}
+
+/** 현재 열려있는 파일의 저작권 정보를 리턴합니다.
+  @return 저작권 정보
+  */
+QString Unhv3::copyrightInformation() const
+{
+    return COPY_;
+}
+
+/** 현재 열려있는 파일의 관련 링크 URL을 리턴합니다.
+  @return 관련 링크 URL
+  */
+QString Unhv3::relatedLink() const
+{
+    return LINK_;
+}
+
+/** 현재 열려있는 파일의 제목을 리턴합니다.
+  @return 파일의 제목
+  */
+QString Unhv3::fileTitle() const
+{
+    return TITL_;
+}
+
+/** 현재 열려있는 파일의 책의 국제 표준 도서 번호 정보를 리턴합니다.
+  @return 책의 ISBN 정보
+  */
+QString Unhv3::isbn() const
+{
+    return ISBN_;
+}
+
+/** 현재 열려있는 파일의 원 저작자를 리턴합니다.
+  @return Original Writer
+  */
+QString Unhv3::originalWriter() const
+{
+    return WRTR_;
+}
+
+/** 현재 열려있는 파일의 출판인을 리턴합니다.
+  @return Publisher
+  */
+QString Unhv3::publisher() const
+{
+    return PUBL_;
+}
+
+/** 현재 열려있는 파일의 원 출판 날자를 리턴합니다.
+  @return Original Publishing date
+  */
+QString Unhv3::originalPublishingDate() const
+{
+    return DATE_;
+}
+
+/** 현재 열려있는 파일의 설명을 리턴합니다.
+  @return Comment
+  */
+QString Unhv3::comment() const
+{
+    return COMT_;
+}
+
+/** 현재 열려있는 파일의 제작자를 리턴합니다.
+  @return HV3 File maker
+  */
+QString Unhv3::fileMaker() const
+{
+    return MAKR_;
+}
+
+/** 현재 열려있는 파일의 장르를 리턴합니다.
+  @return Genere
+  */
+QString Unhv3::genere() const
+{
+    return GENR_;
+}
+
+/** 현재 열려있는 파일 내의 파일 아이템 갯수를 리턴합니다.
   @return 압축파일 내의 파일 아이템 갯수
   */
-int Unhv3::getFileItemCount()
+int Unhv3::fileItemCount() const
 {
     return LIST_.getFileItemCount();
 }
 
+/** 특정 파일 아이템의 정보를 가져옵니다.
+  @return 지정된 인덱스의 파일 아이템 정보
+  */
 const FileInfo* Unhv3::getFileItem(
-        int index
+        int index ///< 파일 아이템의 인덱스
         ) const
 {
     return LIST_.getFileItem(index);
 }
 
+/** 압축파일내의 한개의 파일만을 풀때 사용합니다.
+  @return true : 작업 성공; false : 작업 중 오류 있음.
+  */
 bool Unhv3::extractOneTo(
         int index,
         const QString &savePath
@@ -133,6 +309,10 @@ bool Unhv3::extractOneTo(
     return extractOneAs(index, filePathName);
 }
 
+/** 압축파일내의 한개의 파일만을 풀때 사용합니다. \n
+  Unhv3::extractOneTo와 달리 파일명을 지정할 수 있습니다.
+  @return true : 작업 성공; false : 작업 중 오류 있음.
+  */
 bool Unhv3::extractOneAs(
         int index,
         const QString &filePathName
@@ -168,6 +348,7 @@ bool Unhv3::open(
         )
 {
     file.setFileName(filepath);
+    openStatus = true;
     fileStream_.setDevice(&file);
 
     QFileInfo fileInfo(file);

@@ -72,3 +72,25 @@
 + Unhv3::close 메소드의 용도를 변경.
 	+ Unhv3::close 메소드의 이름를 Unhv3::clear로 수정.
 	+ Unhv3::open 시 close메소드가 호출되지 않도록 변경.
+
+### v0.8.0
+
++ 파일 전체 크기를 반환하는 메소드 Unhv3::archiveFileSize를 추가.
++ 파일 포멧 버전을 반환하는 메소드 Unhv3::archiveFormatVersion를 추가.
++ 파일 메타 정보를 반환하는 메소드를 추가.
+	+ QUuid Unhv3::archiveGuid() const; // 파일의 GUID
+	+ QUuid Unhv3::archiveUuid() const; // UUID
+	+ QDateTime Unhv3::createdTime() const; // 파일이 만들어진 시간
+	+ uint Unhv3::direction() const; // 책의 제본방식
+	+ uint Unhv3::encryptMethod() const; // 파일의 암호화 방식
+	+ QString Unhv3::copyrightInformation() const; // 저작권 정보
+	+ QString Unhv3::relatedLink() const; // 관련 링크 URL
+	+ QString Unhv3::fileTitle() const; // 파일의 제목
+	+ QString Unhv3::isbn() const; // 책의 ISBN 정보
+	+ QString Unhv3::originalWriter() const; // Original Writer
+	+ QString Unhv3::publisher() const; // Publisher
+	+ QString Unhv3::originalPublishingDate() const; // Original Publishing date
+	+ QString Unhv3::comment() const; // Comment
+	+ QString Unhv3::fileMaker() const; // HV3 File maker
+	+ QString Unhv3::genere() const; // Genere
++ API 설명을 추가.

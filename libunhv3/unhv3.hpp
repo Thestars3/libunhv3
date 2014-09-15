@@ -30,7 +30,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 /** hv3(꿀뷰 전용 포멧)을 풀어줍니다.\n
   이 클래스의 멤버 중 `[A-Z0-9]{4}_'형식으로 된 이름은 청크명, 청크 속성명입니다.\n
   <a href="http://www.kippler.com/doc/bond/BondFormat.txt">BondFormat Specification v1.0</a>를 참고하여 만들었습니다.\n
-  고정된 청크 배치를 읽어도록 하였으므로, 속성의 개수나 위치가 바뀐다면 소스를 수정해야 합니다.\n
+  고정된 청크 배치를 읽도록 하였으므로, 속성의 개수나 속성의 위치가 바뀐다면 소스를 수정해야 합니다.\n
   */
 class UNHV3SHARED_EXPORT Unhv3
 {
@@ -39,18 +39,38 @@ public:
     ~Unhv3();
     bool open(const QString &filepath);
     bool extractAllTo(const QString &savePath);
-    Unhv3Status getLastError();
-    int getFileItemCount();
+    Unhv3Status lastError() const;
+    int fileItemCount() const;
     bool extractOneTo(int index, const QString &savePath);
     const FileInfo* getFileItem(int index) const;
     bool testArchive();
     bool extractOneAs(int index, const QString &filePathName);
-    bool isOpened();
+    bool isOpened() const;
     void clear();
     bool isBrokenArchive();
-    QString filePathName();
+    QString filePathName() const;
+    uint archiveFileSize() const;
+    uint formatVersion() const;
+
+    // < -- 메타 정보 Getter -- >
+    QUuid archiveGuid() const;
+    QUuid archiveUuid() const;
+    QDateTime createdTime() const;
+    uint direction() const;
+    uint encryptMethod() const;
+    QString copyrightInformation() const;
+    QString relatedLink() const;
+    QString fileTitle() const;
+    QString isbn() const;
+    QString originalWriter() const;
+    QString publisher() const;
+    QString originalPublishingDate() const;
+    QString comment() const;
+    QString fileMaker() const;
+    QString genere() const;
 
 private:
+    bool openStatus;
     class HdpConverter *converter;
     QFile file;
     QDataStream fileStream_;

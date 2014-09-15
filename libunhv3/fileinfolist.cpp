@@ -25,7 +25,7 @@ FileInfoList::~FileInfoList()
     qDeleteAll(fileInfoList_);
 }
 
-int FileInfoList::getFileItemCount()
+int FileInfoList::getFileItemCount() const
 {
     return fileInfoList_.count();
 }

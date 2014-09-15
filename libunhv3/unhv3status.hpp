@@ -33,6 +33,7 @@ public:
         SAVEPATH_IS_NOT_DIR,  ///< 지정된 저장 경로는 폴더가 아닙니다.
         NOT_YET_IMPELEMENTED  ///< 아직 구현되지 않은 기능입니다.
     };
+    Unhv3Status(Status status);
     Unhv3Status& operator=(const Status &status);
     QString getMessage();
     Status getStatusCode();
