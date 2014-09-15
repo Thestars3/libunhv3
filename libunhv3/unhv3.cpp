@@ -1,6 +1,7 @@
+#include <QBuffer>
 #include <QFileInfo>
 #include <QDataStream>
-#include "HdpConverter/hdpconverter.hpp"
+#include <QImageReader>
 #include "bondchunkattr.hpp"
 #include "unhv3.hpp"
 
@@ -22,12 +23,6 @@ Unhv3::Unhv3() :
     MAKR_(QString::null),
     GENR_(QString::null)
 {
-    converter = new HdpConverter();
-}
-
-Unhv3::~Unhv3()
-{
-    delete converter;
 }
 
 /** 마지막으로 발생한 오류의 상세 내용을 확인한다.
@@ -63,7 +58,8 @@ QString Unhv3::filePathName() const
 {
     if ( isOpened() ) {
         return file.fileName();
-    } else {
+    }
+    else {
         return QString::null;
     }
 }
@@ -82,8 +78,6 @@ void Unhv3::clear()
 {
     file.close();
     openStatus = false;
-    delete converter;
-    converter = new HdpConverter();
     HV30_ = BondChunkHeader();
     VERS_ = 0;
     FSIZ_ = 0;
@@ -318,26 +312,36 @@ bool Unhv3::extractOneAs(
         const QString &filePathName
         )
 {
-    bool success = true;
-    uint pos = LIST_.getFileItem(index)->POS4();
-    QByteArray *raw_data = BODY_.getFileData(pos)->raw_data();
+    const FileInfo *fileItem = LIST_.getFileItem(index);
+    uint pos = fileItem->POS4();
+    QByteArray raw_data = BODY_.getFileData(pos)->raw_data();
 
-    try {
-        converter->setData(*raw_data);
-        if ( converter->hasAlphaChannel() ) {
-            converter->saveToPng(filePathName);
+    if ( QString::compare(QFileInfo(fileItem->NAME()).suffix(), "hdp", Qt::CaseInsensitive) ) {
+        QBuffer buffer(&raw_data);
+        QImage image = QImageReader(&buffer, "HDP").read();
+        if ( image.hasAlphaChannel() ) {
+            return image.save(filePathName, "PNG");
         }
         else {
-            converter->saveToJpeg(filePathName);
+            return image.save(filePathName, "JPEG", 100);
         }
     }
-    catch (WMP_err &err) {
-        success = false;
+    else {
+        QFile file(filePathName);
+
+        if ( ! file.open(QFile::WriteOnly) ) {
+            return false;
+        }
+
+        if ( file.write(raw_data) == -1 ) {
+            file.close();
+            return false;
+        }
+
+        file.close();
+
+        return true;
     }
-
-    delete raw_data;
-
-    return success;
 }
 
 /** filepath에 존재하는 hv3 파일을 엽니다.
@@ -347,6 +351,7 @@ bool Unhv3::open(
         const QString &filepath ///< 파일 경로
         )
 {
+    file.close();
     file.setFileName(filepath);
     openStatus = true;
     fileStream_.setDevice(&file);
@@ -379,8 +384,8 @@ bool Unhv3::open(
             TITL, ISBN, WRTR, PUBL, DATE, COMT, MAKR, GENR;
 
     fileStream_ >> VERS >> FSIZ >> HEAD_ >> GUID >> UUID >> FTIM >> DIRE
-               >> ENCR >> COPY >> LINK >> TITL >> ISBN >> WRTR >> PUBL
-               >> DATE >> COPY >> COMT >> MAKR >> GENR >> LIST_ >> BODY_;
+                >> ENCR >> COPY >> LINK >> TITL >> ISBN >> WRTR >> PUBL
+                >> DATE >> COPY >> COMT >> MAKR >> GENR >> LIST_ >> BODY_;
 
     VERS_ = VERS.fromDword();
     FSIZ_ = FSIZ.fromDword();

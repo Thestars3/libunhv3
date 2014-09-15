@@ -25,7 +25,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 class BondChunkAttr
 {
 private:
-    class QTextCodec *textCodec;
+    const static class QTextCodec *textCodec;
     QString attrName_;       ///< 속성의 이름.
     quint32 attrDataSize_;   ///< 속성 정보의 크기
     quint8 *attrData_;       ///< 속성 데이터. attrDataSize_ 만큼의 크기를 가진다.

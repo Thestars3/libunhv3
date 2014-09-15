@@ -4,6 +4,8 @@
 #
 #-------------------------------------------------
 
+include( ../common.pri )
+
 #소스 디렉토리
 PROJECT_DIR_PATH = $$PWD
 
@@ -20,23 +22,4 @@ DEFINES      += \
 
 QMAKE_CFLAGS_WARN_ON += -w
 
-#Debug
-CONFIG(debug, debug|release) {
-	DEFINES += DEBUG
-
-	DESTDIR = Debug
-
-#Release
-} else {
-	DEFINES += QT_NO_DEBUG_OUTPUT
-
-	DESTDIR = Release
-
-	QMAKE_CFLAGS_RELEASE += -O
-}
-
-UI_DIR      = $$DESTDIR
-
-MOC_DIR     = $$DESTDIR
-
-OBJECTS_DIR = $$DESTDIR
+QMAKE_CFLAGS_RELEASE += -O

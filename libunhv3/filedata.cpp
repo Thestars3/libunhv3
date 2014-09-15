@@ -30,16 +30,16 @@ BondChunkHeader FileData::FILE() const
 }
 
 /** 파일 데이터를 얻습니다.
-  @return 파일 데이터. delete 해줘야 합니다.
+  @return 파일 데이터.
   */
-QByteArray* FileData::raw_data() const
+QByteArray FileData::raw_data() const
 {
     char *data = nullptr;
-    QByteArray *raw_data = nullptr;
+    QByteArray raw_data;
 
     fileStream_->device()->seek(raw_data_pos);
     fileStream_->readBytes(data, const_cast<uint&>(raw_data_len));
-    raw_data = new QByteArray(data, raw_data_len);
+    raw_data.setRawData(data, raw_data_len);
     delete data;
 
     return raw_data;

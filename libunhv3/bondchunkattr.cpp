@@ -81,9 +81,10 @@ QDateTime BondChunkAttr::fromFiletime()
   */
 BondChunkAttr::BondChunkAttr()
 {
-    textCodec = QTextCodec::codecForName("UCS-2 LE");
     attrData_ = nullptr;
 }
+
+const QTextCodec *BondChunkAttr::textCodec = QTextCodec::codecForName("UCS-2 LE");
 
 /** 소멸자.
   */

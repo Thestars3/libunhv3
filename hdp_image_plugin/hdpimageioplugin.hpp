@@ -13,24 +13,22 @@ GNU Lesser General Public License for more details.
 You should have received a copy of the GNU Lesser General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 
-#pragma once
+#ifndef HDPIMAGEIOPLUGIN_HPP
+#define HDPIMAGEIOPLUGIN_HPP
 
-#include <QtCore>
-#include <QString>
+#include <QImageIOPlugin>
 
-typedef long ERR;
-
-class WMP_err :
-        public QtConcurrent::Exception
+class HdpImageIOPlugin :
+        public QImageIOPlugin
 {
 private:
-    ERR err_;
+    QStringList suportFormat;
 
 public:
-    virtual void raise() const;
-    virtual Exception* clone() const;
-    WMP_err(ERR err);
-    ERR getErrorCode();
-    QString getErrorMessage();
-
+    HdpImageIOPlugin(QObject *parent = 0);
+    virtual Capabilities capabilities(QIODevice *device, const QByteArray &format) const;
+    virtual QImageIOHandler* create(QIODevice *device, const QByteArray &format = QByteArray()) const;
+    virtual QStringList keys() const;
 };
+
+#endif // HDPIMAGEIOPLUGIN_HPP

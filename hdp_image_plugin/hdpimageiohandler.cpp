@@ -1,129 +1,41 @@
+#include <QImage>
 #include <JXRTest.h>
-#include <QDataStream>
-#include "hdpconverter.hpp"
+#include "hdpimageiohandler.hpp"
 
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
 
-ERR HdpConverter::PKCodecFactory_CreateDecoderFromMemory(
-        const QByteArray &source,
-        PKImageDecode** ppDecoder
-        )
+bool HdpImageIOHandler::canRead() const
 {
-    ERR err = WMP_errSuccess;
-
-    const PKIID *pIID = nullptr;
-
-    struct WMPStream *pStream = nullptr;
-    PKImageDecode *pDecoder = nullptr;
-
-    // get decode PKIID
-    Call(GetImageDecodeIID(".hdp", &pIID));
-
-    // create stream
-    Call(CreateWS_Memory(&pStream, static_cast<void*>(const_cast<char*>(source.data())), static_cast<size_t>(source.size())));
-
-    // Create decoder
-    Call(PKCodecFactory_CreateCodec(pIID, reinterpret_cast<void**>(ppDecoder)));
-    pDecoder = *ppDecoder;
-
-    // attach stream to decoder
-    Call(pDecoder->Initialize(pDecoder, pStream)); // 이 부분에서 이미지 데이터의 내용을 분석한다.
-    pDecoder->fStreamOwner = !0;
-
-Cleanup:
-    return err;
-}
-
-ERR HdpConverter::WriteQImageHeader(
-        PKImageEncode *pIE,
-        QImage &image
-        )
-{
-    //JXR 라이브러리에서 사용하는 해상도 단위는 인치. QT에서 쓰는건 미터단위.
-    image.setDotsPerMeterX(inchConvertToMeter(pIE->fResX));
-    image.setDotsPerMeterY(inchConvertToMeter(pIE->fResY));
-
-    //헤더 기록 완료
-    pIE->fHeaderDone = !FALSE;
-
-    return WMP_errSuccess;
-}
-
-ERR HdpConverter::PKImageEncode_WritePixels_QImage(
-        PKImageEncode *pIE,
-        U32 cLine,
-        U8 *pbPixel,
-        U32 cbStride,
-        QImage &image,
-        QByteArray &saveSpace
-        )
-{
-    ERR err = WMP_errSuccess;
-
-    QImage::Format format;
-    size_t cbLineM = 0;
-    int size = pIE->uWidth * pIE->uHeight * 4;
-
-    // < -- header -- >
-    if ( ! pIE->fHeaderDone ) {
-        WriteQImageHeader(pIE, image);
+    if ( ! device() ) {
+        qWarning("HdpImageIOHandler::canRead() 불러올 장치를 지정하지 않았습니다.");
+        return false;
     }
 
-    // calculate line size in memory and in stream
-    cbLineM = pIE->cbPixel * pIE->uWidth;
+    // HDP의 magic numbe는 ASCII로 `II.'이고, 위치한 offset은 0이다.
+    const qint64 oldPos = device()->pos();
 
-    FailIf(cbStride < cbLineM, WMP_errInvalidParameter);
+    char head[3];
+    qint64 readBytes = device()->read(head, sizeof(head));
+    const bool readOk = ( readBytes == sizeof(head) );
 
-    if ( pIE->WMP.bHasAlpha ) {
-        format = QImage::Format_ARGB32_Premultiplied;
-        convertRgbaToArgb(pbPixel, size, saveSpace);
+    if ( device()->isSequential() ) {
+        while (readBytes > 0) {
+            device()->ungetChar(head[ readBytes-- - 1 ]);
+        }
     }
     else {
-        format = QImage::Format_RGB888;
-        saveSpace.setRawData(reinterpret_cast<char*>(pbPixel), size);
+        device()->seek(oldPos);
     }
 
-    image = QImage(
-                reinterpret_cast<uchar*>(saveSpace.data()),
-                pIE->uWidth,
-                pIE->uHeight,
-                cbStride,
-                format
-                );
-    pIE->idxCurrentLine += cLine;
-
-Cleanup:
-    return err;
-}
-
-/** RGBA 순서의 바이트 배열을 ARGB 순서로 재배열한다.
-  */
-void HdpConverter::convertRgbaToArgb(
-        uchar *rgbaData, ///< 재배열 할 데이터
-        uint size,       ///< 바이트 수
-        QByteArray &saveSpace
-        )
-{
-    QDataStream rgba;
-    QDataStream argb(&saveSpace, QIODevice::WriteOnly);
-
-    rgba.writeRawData(reinterpret_cast<char*>(rgbaData), size);
-
-    quint8 a = 0, rgb[3];
-    for(uint i = 0; i < size; i += 4) {
-        rgba.readRawData(reinterpret_cast<char*>(rgb), 3);
-        rgba.readRawData(reinterpret_cast<char*>(a), 1);
-        argb.writeRawData(reinterpret_cast<char*>(a), 1);
-        argb.writeRawData(reinterpret_cast<char*>(rgb), 3);
+    if ( ! readOk ) {
+        return false;
     }
+
+    return( head[0] == 'I' && head[1] == 'I' && head[2] == '.' );
 }
 
-/** HDP 포멧 형식의 파일 데이터를 읽어옵니다.
-  @return HdpConverter 객체 참조자.
-  @throw 오류가 존재할 경우 WMP_err를 던집니다. 오류를 받기 위해서는 wmp_err.hpp 헤더 파일이 필요합니다. Commit or rollback semantics.
-  */
-HdpConverter& HdpConverter::setData(
-        const QByteArray &hdpData
+bool HdpImageIOHandler::read(
+        QImage *outImage
         )
 {
     ERR err = WMP_errSuccess;
@@ -139,7 +51,7 @@ HdpConverter& HdpConverter::setData(
 
     Call(PKCreateFactory(&pFactory, PK_SDK_VERSION));
     Call(PKCreateCodecFactory(&pCodecFactory, WMP_SDK_VERSION));
-    Call(PKCodecFactory_CreateDecoderFromMemory(hdpData, &pDecoder));
+    Call(PKCodecFactory_CreateDecoderFromMemory(&pDecoder));
 
     pDecoder->WMP.bIgnoreOverlap = FALSE;
 
@@ -200,7 +112,7 @@ HdpConverter& HdpConverter::setData(
     // < -- 변환된 내용을 기록 -- >
     //pEncoder->WriteSource = PKImageEncode_Transcode;
     //Call(pEncoder->WriteSource(pEncoder, pConverter, &rect));
-    PKImageEncode_Transcode(pEncoder, pConverter, &rect, image, saveSpace);
+    PKImageEncode_Transcode(pEncoder, pConverter, &rect, outImage);
 
     // < -- 인코더 할당 해제 -- >
     pEncoder->Release(&pEncoder);
@@ -210,18 +122,128 @@ HdpConverter& HdpConverter::setData(
 
 Cleanup:
     if ( Failed(err) ) {
-        throw WMP_err(err);
+        return false;
     }
 
-    return *this;
+    return true;
 }
 
-ERR HdpConverter::PKImageEncode_Transcode(
+ERR HdpImageIOHandler::PKCodecFactory_CreateDecoderFromMemory(
+        PKImageDecode **ppDecoder
+        )
+{
+    ERR err = WMP_errSuccess;
+
+    const PKIID *pIID = nullptr;
+
+    struct WMPStream *pStream = nullptr;
+    PKImageDecode *pDecoder = nullptr;
+
+    QByteArray source;
+
+    // get decode PKIID
+    Call(GetImageDecodeIID(".hdp", &pIID));
+
+    // create stream
+    source = device()->readAll();
+    Call(CreateWS_Memory(&pStream, static_cast<void*>(source.data()), static_cast<size_t>(source.size())));
+
+    // Create decoder
+    Call(PKCodecFactory_CreateCodec(pIID, reinterpret_cast<void**>(ppDecoder)));
+    pDecoder = *ppDecoder;
+
+    // attach stream to decoder
+    Call(pDecoder->Initialize(pDecoder, pStream)); // 이 부분에서 이미지 데이터의 내용을 분석한다.
+    pDecoder->fStreamOwner = !0;
+
+Cleanup:
+    return err;
+}
+
+ERR HdpImageIOHandler::WriteQImageHeader(
+        PKImageEncode *pIE,
+        QImage *image
+        )
+{
+    //JXR 라이브러리에서 사용하는 해상도 단위는 인치. QT에서 쓰는건 미터단위.
+    image->setDotsPerMeterX(inchConvertToMeter(pIE->fResX));
+    image->setDotsPerMeterY(inchConvertToMeter(pIE->fResY));
+
+    //헤더 기록 완료
+    pIE->fHeaderDone = !FALSE;
+
+    return WMP_errSuccess;
+}
+
+ERR HdpImageIOHandler::PKImageEncode_WritePixels_QImage(
+        PKImageEncode *pIE,
+        U32 cLine,
+        U8 *pbPixel,
+        U32 cbStride,
+        QImage *outImage
+        )
+{
+    ERR err = WMP_errSuccess;
+
+    QImage::Format format;
+    size_t cbLineM = 0;
+    int size = pIE->uWidth * pIE->uHeight * 4;
+
+    // < -- header -- >
+    if ( ! pIE->fHeaderDone ) {
+        WriteQImageHeader(pIE, outImage);
+    }
+
+    // calculate line size in memory and in stream
+    cbLineM = pIE->cbPixel * pIE->uWidth;
+
+    FailIf(cbStride < cbLineM, WMP_errInvalidParameter);
+
+    if ( pIE->WMP.bHasAlpha ) {
+        format = QImage::Format_ARGB32_Premultiplied;
+        convertRgbaToArgb(pbPixel, size);
+    }
+    else {
+        format = QImage::Format_RGB888;
+    }
+
+    *outImage = QImage(pbPixel, pIE->uWidth, pIE->uHeight, cbStride, format);
+    pIE->idxCurrentLine += cLine;
+
+Cleanup:
+    return err;
+}
+
+/** RGBA 순서로된 바이트 배열을 ARGB 순서로 재배열한다.
+  */
+void HdpImageIOHandler::convertRgbaToArgb(
+        uchar *data, ///< 재배열 할 데이터
+        uint size        ///< 바이트 수
+        )
+{
+    quint8 r, g, b, a;
+    uchar *p = data;
+    uint i = 0;
+    while( i < size ) {
+        r = p[0];
+        g = p[1];
+        b = p[2];
+        a = p[3];
+
+        *p++ = a;
+        *p++ = r;
+        *p++ = g;
+        *p++ = b;
+
+        i += 4;
+    }
+}
+
+ERR HdpImageIOHandler::PKImageEncode_Transcode(
         PKImageEncode *pIE,
         PKFormatConverter *pFC,
         PKRect *pRect,
-        QImage &image,
-        QByteArray &saveSpace
+        QImage *outImage
         )
 {
     ERR err = WMP_errSuccess;
@@ -281,32 +303,10 @@ ERR HdpConverter::PKImageEncode_Transcode(
         Call(PKAllocAligned((void **) &pb, cbStride * pRect->Height, 128));
         Call(pFC->Copy(pFC, pRect, pb, cbStride));
         //Call(pIE->WritePixels(pIE, pRect->Height, pb, cbStride));
-        Call(PKImageEncode_WritePixels_QImage(pIE, pRect->Height, pb, cbStride, image, saveSpace));
+        Call(PKImageEncode_WritePixels_QImage(pIE, pRect->Height, pb, cbStride, outImage));
     }
 
 Cleanup:
     PKFreeAligned(reinterpret_cast<void**>(&pb));
     return err;
-}
-
-/** 알파 채널이 포함되었는지 확인한다.
-  @return 알파값 포함 여부. true : 포함됨. false : 없음.
-  */
-bool HdpConverter::hasAlphaChannel()
-{
-    return image.hasAlphaChannel();
-}
-
-bool HdpConverter::saveToJpeg(
-        const QString &filePath ///< 저장 경로
-        )
-{
-    return image.save(filePath, "JPEG", 100);
-}
-
-bool HdpConverter::saveToPng(
-        const QString &filePath ///< 저장 경로
-        )
-{
-    return image.save(filePath, "PNG");
 }

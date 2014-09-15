@@ -5,10 +5,7 @@
 #-------------------------------------------------
 
 #프로젝트 디렉토리
-ROOT_PATH        = $$system(readlink -f ..)
-
-#소스 디렉토리
-PROJECT_DIR_PATH = $$PWD
+ROOT_PATH   = $$PWD
 
 #Debug
 CONFIG(debug, debug|release) {

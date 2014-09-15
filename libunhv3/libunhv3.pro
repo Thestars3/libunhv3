@@ -4,9 +4,9 @@
 #
 #-------------------------------------------------
 
-include( common.pri )
+include( ../common.pri )
 
-include( ../jxrlib/jxrlib_include.pri )
+include( $$ROOT_PATH/hdp_image_plugin/hdp_image_plugin_include.pri )
 
 TEMPLATE = lib
 
@@ -26,9 +26,7 @@ HEADERS  += \
     fileinfolist.hpp \
     ufp.hpp \
     filedatastorage.hpp \
-    filedata.hpp \
-    HdpConverter/hdpconverter.hpp \
-    HdpConverter/wmp_err.hpp
+    filedata.hpp
 
 SOURCES  += \
 	unhv3.cpp \
@@ -39,11 +37,11 @@ SOURCES  += \
     ufp.cpp \
     filedatastorage.cpp \
     filedata.cpp \
-    HdpConverter/hdpconverter.cpp \
-    HdpConverter/wmp_err.cpp \
     unhv3status.cpp
 
 DEFINES  += \
 	UNHV3_LIBRARY
+
+QTPLUGIN += hdp_image
 
 QMAKE_CXXFLAGS += -std=c++0x

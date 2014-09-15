@@ -36,14 +36,13 @@ class UNHV3SHARED_EXPORT Unhv3
 {
 public:
     Unhv3();
-    ~Unhv3();
     bool open(const QString &filepath);
-    bool extractAllTo(const QString &savePath);
     Unhv3Status lastError() const;
     int fileItemCount() const;
-    bool extractOneTo(int index, const QString &savePath);
     const FileInfo* getFileItem(int index) const;
     bool testArchive();
+    bool extractAllTo(const QString &savePath);
+    bool extractOneTo(int index, const QString &savePath);
     bool extractOneAs(int index, const QString &filePathName);
     bool isOpened() const;
     void clear();
@@ -71,10 +70,11 @@ public:
 
 private:
     bool openStatus;
-    class HdpConverter *converter;
     QFile file;
     QDataStream fileStream_;
     Unhv3Status status;
+
+    // < -- HV3 File Data -- >
     BondChunkHeader HV30_; ///< HV3 파일임을 의미
     uint            VERS_; ///< HV3 포맷의 버전 정보
     uint            FSIZ_; ///< 전체 파일의 크기
