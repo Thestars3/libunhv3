@@ -26,7 +26,8 @@ HEADERS  += \
     fileinfolist.hpp \
     ufp.hpp \
     filedatastorage.hpp \
-    filedata.hpp
+    filedata.hpp \
+    unhv3event.hpp
 
 SOURCES  += \
 	unhv3.cpp \
@@ -37,11 +38,9 @@ SOURCES  += \
     ufp.cpp \
     filedatastorage.cpp \
     filedata.cpp \
-    unhv3status.cpp
+    unhv3status.cpp \
+    unhv3event.cpp
 
-DEFINES  += \
-	UNHV3_LIBRARY
-
-QTPLUGIN += hdp_image
+DEFINES  += UNHV3_LIBRARY
 
 QMAKE_CXXFLAGS += -std=c++0x

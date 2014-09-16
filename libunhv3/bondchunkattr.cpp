@@ -5,9 +5,9 @@
   마이크로스트社에서 UUID 표준을 구현한 것이 GUID이며, 데이터 구조상으로 UUID와 동일하다.
   @return QUuid
   */
-QUuid BondChunkAttr::fromGuid()
+QUuid BondChunkAttr::fromGuid() const
 {
-    QDataStream dataStream;
+    QDataStream dataStream(attrData_);
     uint l;
     ushort w1, w2;
     uchar b[8];
@@ -15,7 +15,6 @@ QUuid BondChunkAttr::fromGuid()
     quint16 u16;
     quint8 u8;
 
-    dataStream.readBytes(reinterpret_cast<char*&>(attrData_), attrDataSize_);
     dataStream >> u32;
     l = u32;
     dataStream >> u16;
@@ -33,10 +32,9 @@ QUuid BondChunkAttr::fromGuid()
 /** hv3 포멧의 UUID 타입을 QUuid 타입으로 저장합니다.
   @return QUuid
   */
-QUuid BondChunkAttr::fromUuid()
+QUuid BondChunkAttr::fromUuid() const
 {
-    QDataStream dataStream;
-    dataStream.readBytes(reinterpret_cast<char*&>(attrData_), attrDataSize_);
+    QDataStream dataStream(attrData_);
     QUuid uuid;
     dataStream >> uuid;
     return uuid;
@@ -45,11 +43,10 @@ QUuid BondChunkAttr::fromUuid()
 /** hv3 포멧의 DWORD 타입을 uint 타입으로 저장합니다.
   @return uint
   */
-uint BondChunkAttr::fromDword()
+uint BondChunkAttr::fromDword() const
 {
-    QDataStream dataStream;
+    QDataStream dataStream(attrData_);
     quint32 i;
-    dataStream.readBytes(reinterpret_cast<char*&>(attrData_), attrDataSize_);
     dataStream >> i;
     return i;
 }
@@ -57,58 +54,46 @@ uint BondChunkAttr::fromDword()
 /** hv3 포멧의 STRING 타입을 QString 타입으로 바꾸어 저장합니다.
   @return QString
   */
-QString BondChunkAttr::fromString()
+QString BondChunkAttr::fromString() const
 {
-    return textCodec->toUnicode(reinterpret_cast<char*>(attrData_), attrDataSize_);
+    return textCodec->toUnicode(attrData_);
 }
 
 /** hv3 포멧의 FILETIME 타입을 QDateTime 타입으로 바꾸어 저장합니다.
   @return QDateTime
   */
-QDateTime BondChunkAttr::fromFiletime()
+QDateTime BondChunkAttr::fromFiletime() const
 {
-    QDataStream dataStream;
+    QDataStream dataStream(attrData_);
     QDateTime dateTime;
     qint32 nYear, nMonth, nDay, nHour, nMin, nSec;
-    dataStream.readBytes(reinterpret_cast<char*&>(attrData_), attrDataSize_);
     dataStream >> nYear >> nMonth >> nDay >> nHour >> nMin >> nSec;
     dateTime.setDate(QDate(nYear, nMonth, nDay));
     dateTime.setTime(QTime(nHour, nMin, nSec));
     return dateTime;
 }
 
-/** 생성자.
-  */
-BondChunkAttr::BondChunkAttr()
-{
-    attrData_ = nullptr;
-}
-
 const QTextCodec *BondChunkAttr::textCodec = QTextCodec::codecForName("UCS-2 LE");
-
-/** 소멸자.
-  */
-BondChunkAttr::~BondChunkAttr()
-{
-    if ( attrData_ != nullptr ) {
-        delete attrData_;
-    }
-}
 
 /** BondChunkAttr 역직렬화 수행자.
   */
 QDataStream& operator>>(
-        QDataStream &in,
-        BondChunkAttr &bondChunkAttr
+        QDataStream &in, ///< 데이터 스트림
+        BondChunkAttr &bondChunkAttr ///< BOND 포멧 속성 청크 객체
         )
 {
     char attrName[5] = {'\0',};
+    quint32 attrDataSize; // 속성 정보의 크기
+    quint8 *attrData;     // 속성 데이터. attrDataSize_ 만큼의 크기를 가진다.
+
     in.readRawData(attrName, 4);
     bondChunkAttr.attrName_ = attrName;
 
-    in >> bondChunkAttr.attrDataSize_;
+    in >> attrDataSize;
 
-    in.readBytes(reinterpret_cast<char*&>(bondChunkAttr.attrData_), bondChunkAttr.attrDataSize_);
+    in.readBytes(reinterpret_cast<char*&>(attrData), attrDataSize);
+    bondChunkAttr.attrData_.setRawData(reinterpret_cast<const char*>(attrData), attrDataSize);
+    delete attrData;
 
     return in;
 }
@@ -116,23 +101,15 @@ QDataStream& operator>>(
 /** 속성의 이름을 반환한다.
   @return 속성의 이름
   */
-QString BondChunkAttr::attrName()
+QString BondChunkAttr::attrName() const
 {
     return attrName_;
-}
-
-/** 속성 정보의 크기를 반환한다.
-  @return 속성 정보의 크기
-  */
-quint32 BondChunkAttr::attrDataSize()
-{
-    return attrDataSize_;
 }
 
 /** 속성 데이터를 반환한다.
   @return 속성 데이터
   */
-quint8* BondChunkAttr::attrData()
+QByteArray BondChunkAttr::attrData() const
 {
     return attrData_;
 }

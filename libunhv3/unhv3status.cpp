@@ -1,5 +1,8 @@
 #include "unhv3status.hpp"
 
+/** 대입 연산자.
+  @return 이 객체의 참조자.
+  */
 Unhv3Status& Unhv3Status::operator=(
         const Status &status ///< 상태
         )
@@ -8,12 +11,18 @@ Unhv3Status& Unhv3Status::operator=(
     return *this;
 }
 
-Unhv3Status::Status Unhv3Status::getStatusCode()
+/** 상태 코드를 반환합니다.
+  @return 상태 코드
+  */
+Unhv3Status::Status Unhv3Status::statusCode() const
 {
     return status_;
 }
 
-QString Unhv3Status::getMessage()
+/** 상태 코드에 대한 메시지를 반환합니다.
+  @return 상태 코드에 대한 메시지
+  */
+QString Unhv3Status::message() const
 {
     switch (status_) {
     case NO_ERROR:
@@ -40,13 +49,17 @@ QString Unhv3Status::getMessage()
     case NOT_YET_IMPELEMENTED:
         return QString::fromUtf8("아직 구현되지 않은 기능을 사용하려 했습니다.");
 
-    default:
-        return QString::fromUtf8("알 수 없는 오류 코드입니다.");
+    case SAVE_FILE_ERROR:
+        return QString::fromUtf8("파일을 쓰는데 실패했습니다.");
     }
+
+    return QString::fromUtf8("알 수 없는 오류 코드입니다.");
 }
 
+/** 생성자.
+  */
 Unhv3Status::Unhv3Status(
-        Status status
+        Status status ///< 상태 코드
         ) :
     status_(status)
 {

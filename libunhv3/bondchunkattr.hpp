@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 
 #include <QUuid>
 #include <QDateTime>
+#include <QByteArray>
 #include <QDataStream>
 
 /** 속성 청크
@@ -25,27 +26,22 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 class BondChunkAttr
 {
 private:
-    const static class QTextCodec *textCodec;
+    const static class QTextCodec *textCodec; /// 텍스트 변환 코덱
     QString attrName_;       ///< 속성의 이름.
-    quint32 attrDataSize_;   ///< 속성 정보의 크기
-    quint8 *attrData_;       ///< 속성 데이터. attrDataSize_ 만큼의 크기를 가진다.
+    QByteArray attrData_;    ///< 속성 데이터.
     friend QDataStream& operator>>(QDataStream &in, BondChunkAttr &bondChunkAttr);
 
 public:
-    BondChunkAttr();
-    ~BondChunkAttr();
-
     // < -- Getter -- >
-    QString attrName();
-    quint32 attrDataSize();
-    quint8* attrData();
+    QString attrName() const;
+    QByteArray attrData() const;
 
     // < -- 변환 메소드 -- >
-    QString fromString();
-    QDateTime fromFiletime();
-    uint fromDword();
-    QUuid fromGuid();
-    QUuid fromUuid();
+    QString fromString() const;
+    QDateTime fromFiletime() const;
+    uint fromDword() const;
+    QUuid fromGuid() const;
+    QUuid fromUuid() const;
 
 };
 

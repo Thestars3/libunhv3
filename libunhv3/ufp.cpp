@@ -2,9 +2,11 @@
 
 using namespace ufp;
 
+/** CRC-32를 계산합니다.
+  @return CRC-32
+  */
 quint32 ufp::computeCrc32(
-        const char *data,
-        uint len
+        const QByteArray &data
         )
 {
     const static quint32 crcTable[256] = {
@@ -49,7 +51,8 @@ quint32 ufp::computeCrc32(
 
     quint32 crc = 0xFFFFFFFF;
     uchar c;
-    const uchar *p = reinterpret_cast<const uchar*>(data);
+    const uchar *p = reinterpret_cast<const uchar*>(data.data());
+    uint len = static_cast<uint>(data.length());
 
     while( len-- ) {
         c = *p++;

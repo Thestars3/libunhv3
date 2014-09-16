@@ -95,9 +95,17 @@
 	+ QString Unhv3::genere() const; // Genere
 + API 설명을 추가.
 
-#### v0.9.0
+### v0.9.0
 
 + BondChunkAttr::textCodec을 한번만 할당하도록 수정.
 + HdpConvert class를 QImageIOPlugin으로 수정.
 + WMP_err 클래스를 제거.
 + 파일 저장시 저장된 파일명의 확장자가 HDP인 경우에만 JPEG(또는 PNG)로의 이미지 변환 과정을 수행하도록 수정.
+
+#### v0.10.0
+
++ FileData 데이터 스트림 읽기시 순서가 잘못되던 부분 수정.
++ 마이너 버그 픽스.
++ 압축 해제 속도 개선.
++ Unhv3Event 추가.
++ 파일 쓰기 실패 오류를 추가.

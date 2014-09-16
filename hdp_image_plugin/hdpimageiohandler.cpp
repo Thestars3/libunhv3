@@ -129,7 +129,7 @@ Cleanup:
 }
 
 ERR HdpImageIOHandler::PKCodecFactory_CreateDecoderFromMemory(
-        PKImageDecode **ppDecoder
+        PKImageDecode **ppDecoder ///< PKImageDecode 이중 포인터
         )
 {
     ERR err = WMP_errSuccess;
@@ -161,8 +161,8 @@ Cleanup:
 }
 
 ERR HdpImageIOHandler::WriteQImageHeader(
-        PKImageEncode *pIE,
-        QImage *image
+        PKImageEncode *pIE, ///< PKImageEncode
+        QImage *image ///< 이미지 객체 포인터
         )
 {
     //JXR 라이브러리에서 사용하는 해상도 단위는 인치. QT에서 쓰는건 미터단위.
@@ -176,11 +176,11 @@ ERR HdpImageIOHandler::WriteQImageHeader(
 }
 
 ERR HdpImageIOHandler::PKImageEncode_WritePixels_QImage(
-        PKImageEncode *pIE,
+        PKImageEncode *pIE, ///< PKImageEncode
         U32 cLine,
-        U8 *pbPixel,
+        U8 *pbPixel, ///< 픽셀 데이터
         U32 cbStride,
-        QImage *outImage
+        QImage *outImage ///< 출력 이미지 객체 포인터
         )
 {
     ERR err = WMP_errSuccess;
@@ -188,11 +188,6 @@ ERR HdpImageIOHandler::PKImageEncode_WritePixels_QImage(
     QImage::Format format;
     size_t cbLineM = 0;
     int size = pIE->uWidth * pIE->uHeight * 4;
-
-    // < -- header -- >
-    if ( ! pIE->fHeaderDone ) {
-        WriteQImageHeader(pIE, outImage);
-    }
 
     // calculate line size in memory and in stream
     cbLineM = pIE->cbPixel * pIE->uWidth;
@@ -210,15 +205,21 @@ ERR HdpImageIOHandler::PKImageEncode_WritePixels_QImage(
     *outImage = QImage(pbPixel, pIE->uWidth, pIE->uHeight, cbStride, format);
     pIE->idxCurrentLine += cLine;
 
+    // < -- header -- >
+    if ( ! pIE->fHeaderDone ) {
+        WriteQImageHeader(pIE, outImage);
+    }
+
 Cleanup:
     return err;
 }
 
 /** RGBA 순서로된 바이트 배열을 ARGB 순서로 재배열한다.
+  @warning 사용시 원본의 값이 변경됩니다.
   */
 void HdpImageIOHandler::convertRgbaToArgb(
-        uchar *data, ///< 재배열 할 데이터
-        uint size        ///< 바이트 수
+        uchar *data,   ///< 재배열 할 데이터
+        uint size      ///< 바이트 수
         )
 {
     quint8 r, g, b, a;
@@ -240,10 +241,10 @@ void HdpImageIOHandler::convertRgbaToArgb(
 }
 
 ERR HdpImageIOHandler::PKImageEncode_Transcode(
-        PKImageEncode *pIE,
-        PKFormatConverter *pFC,
-        PKRect *pRect,
-        QImage *outImage
+        PKImageEncode *pIE, ///< PKImageEncode
+        PKFormatConverter *pFC, ///< PKFormatConverter
+        PKRect *pRect, ///< PKRect
+        QImage *outImage ///< 출력 이미지 객체 포인터
         )
 {
     ERR err = WMP_errSuccess;

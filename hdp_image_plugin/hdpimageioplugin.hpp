@@ -22,13 +22,14 @@ class HdpImageIOPlugin :
         public QImageIOPlugin
 {
 private:
-    QStringList suportFormat;
+    QStringList suportFormat; ///< 지원 포멧 리스트
 
 public:
     HdpImageIOPlugin(QObject *parent = 0);
     virtual Capabilities capabilities(QIODevice *device, const QByteArray &format) const;
     virtual QImageIOHandler* create(QIODevice *device, const QByteArray &format = QByteArray()) const;
     virtual QStringList keys() const;
+
 };
 
 #endif // HDPIMAGEIOPLUGIN_HPP

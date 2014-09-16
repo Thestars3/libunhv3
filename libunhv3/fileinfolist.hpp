@@ -24,8 +24,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 class FileInfoList
 {
 private:
-    BondChunkHeader LIST_; ///< 파일 정보 목록, 여러개의 하위 FINF 청크를 가진다.
-    QVector<FileInfo*> fileInfoList_;
+    BondChunkHeader LIST_;            ///< 파일 정보 목록, 여러개의 하위 FINF 청크를 가진다.
+    QVector<FileInfo*> fileInfoList_; ///< 파일 정보 컨테이너
     friend QDataStream& operator>>(QDataStream &in, FileInfoList &fileInfoList);
 
 public:

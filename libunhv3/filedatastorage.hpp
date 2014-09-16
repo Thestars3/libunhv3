@@ -24,12 +24,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 class FileDataStorage
 {
 private:
-    BondChunkHeader BODY_; ///< 파일데이터를 담는 청크, 속성 청크는 가지지 않으며, 여러개의 하위 FILE 청크를 가진다.
-    QVector<FileData*> fileDataStorage_;
+    BondChunkHeader BODY_;               ///< 파일데이터를 담는 청크, 속성 청크는 가지지 않으며, 여러개의 하위 FILE 청크를 가진다.
+    QVector<FileData*> fileDataStorage_; ///< 파일 데이터 컨테이너
     friend QDataStream& operator>>(QDataStream &in, FileDataStorage &fileDataStorage);
 
 public:
-    const FileData* getFileData(uint pos);
+    const FileData* getFileData(uint pos) const;
     ~FileDataStorage();
 
 };

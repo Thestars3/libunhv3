@@ -31,15 +31,16 @@ public:
         CRC_ERROR,            ///< CRC 오류
         SAVEPATH_NOT_EXIST,   ///< 지정된 저장 경로가 존재하지 않음.
         SAVEPATH_IS_NOT_DIR,  ///< 지정된 저장 경로는 폴더가 아닙니다.
-        NOT_YET_IMPELEMENTED  ///< 아직 구현되지 않은 기능입니다.
+        NOT_YET_IMPELEMENTED, ///< 아직 구현되지 않은 기능입니다.
+        SAVE_FILE_ERROR       ///< 파일 쓰기 실패.
     };
     Unhv3Status(Status status);
     Unhv3Status& operator=(const Status &status);
-    QString getMessage();
-    Status getStatusCode();
+    QString message() const;
+    Status statusCode() const;
 
 private:
-    Status status_;
+    Status status_; ///< 상태 코드
 
 };
 

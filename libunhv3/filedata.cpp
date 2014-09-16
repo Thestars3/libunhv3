@@ -4,8 +4,8 @@
 /** FileData 역직렬화 수행자.
   */
 QDataStream& operator>>(
-        QDataStream &in,
-        FileData &fileData
+        QDataStream &in, ///< 데이터 스트림
+        FileData &fileData ///< 파일 데이터 객체
         )
 {
     uint len;
@@ -16,6 +16,8 @@ QDataStream& operator>>(
     // raw_data
     fileData.raw_data_pos = in.device()->pos();
     fileData.raw_data_len = len;
+    in.skipRawData(len);
+
     fileData.fileStream_ = &in;
 
     return in;
@@ -45,7 +47,10 @@ QByteArray FileData::raw_data() const
     return raw_data;
 }
 
-quint64 FileData::pos()
+/** 압축 파일 내에서의 파일 데이터 위치를 반환합니다.
+  @return 압축 파일 내에서의 파일 데이터 위치
+  */
+quint64 FileData::pos() const
 {
     return pos_;
 }

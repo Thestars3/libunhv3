@@ -23,17 +23,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 class FileData
 {
 private:
-    BondChunkHeader FILE_;      ///< 파일 데이터 청크, 속성청크는 가지지 않는다.
-    //QByteArray      raw_data_;  ///< 파일 데이터
-    quint64 raw_data_pos;
-    uint raw_data_len;
-    quint64 pos_;     ///< 이 청크의 시작 오프셋.
-    QDataStream *fileStream_;
+    BondChunkHeader FILE_;    ///< 파일 데이터 청크, 속성청크는 가지지 않는다.
+    quint64 raw_data_pos;     ///< 파일 상에서의 데이터 시작 위치
+    uint raw_data_len;        ///< 데이터 크기
+    quint64 pos_;             ///< 이 청크의 시작 오프셋.
+    QDataStream *fileStream_; ///< 파일 스트림 객체 포인터
     friend QDataStream& operator>>(QDataStream &in, FileData &fileData);
 
 public:
     // < -- Getter -- >
-    quint64 pos();
+    quint64 pos() const;
     BondChunkHeader FILE() const;
     QByteArray raw_data() const;
 

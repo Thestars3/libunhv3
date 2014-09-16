@@ -27,6 +27,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 #include "fileinfolist.hpp"
 #include "unhv3status.hpp"
 
+class Unhv3Event;
+
 /** hv3(꿀뷰 전용 포멧)을 풀어줍니다.\n
   이 클래스의 멤버 중 `[A-Z0-9]{4}_'형식으로 된 이름은 청크명, 청크 속성명입니다.\n
   <a href="http://www.kippler.com/doc/bond/BondFormat.txt">BondFormat Specification v1.0</a>를 참고하여 만들었습니다.\n
@@ -36,43 +38,54 @@ class UNHV3SHARED_EXPORT Unhv3
 {
 public:
     Unhv3();
+
     bool open(const QString &filepath);
-    Unhv3Status lastError() const;
-    int fileItemCount() const;
-    const FileInfo* getFileItem(int index) const;
+    bool setEvent(Unhv3Event *event);
+
+    // < -- 상태 확인 -- >
     bool testArchive();
+    bool isOpened() const;
+    bool isBrokenArchive();
+    Unhv3Status lastError() const;
+    const FileInfo* getFileItem(int index) const;
+
+    // < -- 파일 정보 -- >
+    int fileItemCount() const;
+    uint formatVersion() const;
+    uint archiveFileSize() const;
+    QString filePathName() const;
+
+    // < -- 압축 풀기 -- >
     bool extractAllTo(const QString &savePath);
     bool extractOneTo(int index, const QString &savePath);
     bool extractOneAs(int index, const QString &filePathName);
-    bool isOpened() const;
-    void clear();
-    bool isBrokenArchive();
-    QString filePathName() const;
-    uint archiveFileSize() const;
-    uint formatVersion() const;
 
-    // < -- 메타 정보 Getter -- >
-    QUuid archiveGuid() const;
-    QUuid archiveUuid() const;
+    // < -- 메타 정보 -- >
+    uint      direction() const;
+    uint      encryptMethod() const;
+    QUuid     archiveUuid() const;
+    QUuid     archiveGuid() const;
+    QString   isbn() const;
+    QString   genere() const;
+    QString   comment() const;
+    QString   publisher() const;
+    QString   fileTitle() const;
+    QString   fileMaker() const;
+    QString   relatedLink() const;
+    QString   originalWriter() const;
+    QString   copyrightInformation() const;
+    QString   originalPublishingDate() const;
     QDateTime createdTime() const;
-    uint direction() const;
-    uint encryptMethod() const;
-    QString copyrightInformation() const;
-    QString relatedLink() const;
-    QString fileTitle() const;
-    QString isbn() const;
-    QString originalWriter() const;
-    QString publisher() const;
-    QString originalPublishingDate() const;
-    QString comment() const;
-    QString fileMaker() const;
-    QString genere() const;
+
+protected:
+    void clear();
 
 private:
-    bool openStatus;
-    QFile file;
-    QDataStream fileStream_;
-    Unhv3Status status;
+    Unhv3Event *event_;      ///< 이벤트 처리자.
+    bool openStatus;         ///< 파일 열림 여부.
+    QFile file;              ///< 파일 객체
+    QDataStream fileStream_; ///< 파일 스트림
+    Unhv3Status status;      ///< 객체 상태
 
     // < -- HV3 File Data -- >
     BondChunkHeader HV30_; ///< HV3 파일임을 의미

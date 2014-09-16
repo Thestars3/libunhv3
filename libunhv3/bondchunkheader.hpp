@@ -33,10 +33,10 @@ public:
     const static uint CHUNK_SIZE; ///< 청크 자체의 크기
 
     // < -- Getter -- >
-    QString chunkName();
-    quint32 attrSize();
-    quint32 subChunkSize();
-    quint32 chunkDataSize();
+    QString chunkName() const;
+    quint32 attrSize() const;
+    quint32 subChunkSize() const;
+    quint32 chunkDataSize() const;
 
 };
 

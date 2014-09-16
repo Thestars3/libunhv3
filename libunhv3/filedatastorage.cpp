@@ -1,5 +1,7 @@
 #include "filedatastorage.hpp"
 
+/** 소멸자.
+  */
 FileDataStorage::~FileDataStorage()
 {
     qDeleteAll(fileDataStorage_);
@@ -8,8 +10,8 @@ FileDataStorage::~FileDataStorage()
 /** FileDataStorage 역직렬화 수행자.
   */
 QDataStream& operator>>(
-        QDataStream &in,
-        FileDataStorage &fileDataStorage
+        QDataStream &in, ///< 데이터 스트림
+        FileDataStorage &fileDataStorage ///< 파일 데이터 저장소 객체
         )
 {
     in >> fileDataStorage.BODY_;
@@ -28,8 +30,8 @@ QDataStream& operator>>(
   @return 파일 데이터 객체 포인터.
   */
 const FileData* FileDataStorage::getFileData(
-        uint pos
-        )
+        uint pos ///< 파일 데이터 시작 위치
+        ) const
 {
     foreach(FileData *fileData, fileDataStorage_) {
         if ( fileData->pos() == static_cast<quint64>(pos) ) {

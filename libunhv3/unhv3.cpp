@@ -3,8 +3,28 @@
 #include <QDataStream>
 #include <QImageReader>
 #include "bondchunkattr.hpp"
+#include "unhv3event.hpp"
+#include "ufp.hpp"
 #include "unhv3.hpp"
 
+/** 압축 해제중 발생하는 여러가지 이벤트를 받아서 처리하고 싶을 경우, 이벤트를 콜백으로 받을 객체를 지정합니다.
+  @return 성공여부.
+  */
+bool Unhv3::setEvent(
+        Unhv3Event *event ///< 이벤트를 받을 객체의 포인터
+        )
+{
+    if ( event == nullptr ) {
+        return false;
+    }
+
+    event_ = event;
+
+    return true;
+}
+
+/** 생성자.
+  */
 Unhv3::Unhv3() :
     openStatus(false),
     status(Unhv3Status::NO_ERROR),
@@ -132,6 +152,7 @@ bool Unhv3::extractAllTo(
         QString fileName = fileInfo->NAME();
         extractOneAs(i, fileName);
     }
+    event_->setComplete();
     pwd.cd(".");
 
     return true;
@@ -296,7 +317,7 @@ const FileInfo* Unhv3::getFileItem(
   */
 bool Unhv3::extractOneTo(
         int index,
-        const QString &savePath
+        const QString &savePath ///< 저장될 경로
         )
 {
     QString filePathName = savePath + "/" + getFileItem(index)->NAME();
@@ -309,39 +330,64 @@ bool Unhv3::extractOneTo(
   */
 bool Unhv3::extractOneAs(
         int index,
-        const QString &filePathName
+        const QString &filePathName ///< 저장될 파일의 이름을 포함한 경로
         )
 {
     const FileInfo *fileItem = LIST_.getFileItem(index);
     uint pos = fileItem->POS4();
-    QByteArray raw_data = BODY_.getFileData(pos)->raw_data();
+    QByteArray raw_data;
 
-    if ( QString::compare(QFileInfo(fileItem->NAME()).suffix(), "hdp", Qt::CaseInsensitive) ) {
+    event_->setProgress(0);
+    raw_data = BODY_.getFileData(pos)->raw_data();
+
+    event_->setProgress(33);
+    if ( ufp::computeCrc32(raw_data) != fileItem->CRC3() ) {
+        status = Unhv3Status::CRC_ERROR;
+        event_->setError(filePathName, status);
+        return false;
+    }
+    if ( QString::compare(QFileInfo(fileItem->NAME()).suffix(), "hdp", Qt::CaseInsensitive) == 0 ) {
         QBuffer buffer(&raw_data);
         QImage image = QImageReader(&buffer, "HDP").read();
+        event_->setProgress(66);
+
+        bool b = true;
         if ( image.hasAlphaChannel() ) {
-            return image.save(filePathName, "PNG");
+            b = image.save(filePathName, "PNG");
         }
         else {
-            return image.save(filePathName, "JPEG", 100);
+            b = image.save(filePathName, "JPEG", 100);
+        }
+        event_->setProgress(99);
+
+        if ( ! b ) {
+            status = Unhv3Status::SAVE_FILE_ERROR;
+            event_->setError(filePathName, status);
+            return false;
         }
     }
     else {
         QFile file(filePathName);
 
         if ( ! file.open(QFile::WriteOnly) ) {
+            status = Unhv3Status::SAVE_FILE_ERROR;
+            event_->setError(filePathName, status);
             return false;
         }
 
         if ( file.write(raw_data) == -1 ) {
+            status = Unhv3Status::SAVE_FILE_ERROR;
+            event_->setError(filePathName, status);
             file.close();
             return false;
         }
+        event_->setProgress(99);
 
         file.close();
-
-        return true;
     }
+
+    event_->setProgress(100);
+    return true;
 }
 
 /** filepath에 존재하는 hv3 파일을 엽니다.
@@ -380,12 +426,9 @@ bool Unhv3::open(
         return false;
     }
 
-    BondChunkAttr VERS, FSIZ, GUID, UUID, FTIM, DIRE, COPY, ENCR, LINK,
-            TITL, ISBN, WRTR, PUBL, DATE, COMT, MAKR, GENR;
+    BondChunkAttr VERS, FSIZ, GUID, UUID, FTIM, DIRE, COPY, ENCR, LINK, TITL, ISBN, WRTR, PUBL, DATE, COMT, MAKR, GENR;
 
-    fileStream_ >> VERS >> FSIZ >> HEAD_ >> GUID >> UUID >> FTIM >> DIRE
-                >> ENCR >> COPY >> LINK >> TITL >> ISBN >> WRTR >> PUBL
-                >> DATE >> COPY >> COMT >> MAKR >> GENR >> LIST_ >> BODY_;
+    fileStream_ >> VERS >> FSIZ >> HEAD_ >> GUID >> UUID >> FTIM >> DIRE >> ENCR >> COPY >> LINK >> TITL >> ISBN >> WRTR >> PUBL >> DATE >> COPY >> COMT >> MAKR >> GENR >> LIST_ >> BODY_;
 
     VERS_ = VERS.fromDword();
     FSIZ_ = FSIZ.fromDword();

@@ -4,8 +4,8 @@
 /** FileInfo 역직렬화 수행자.
   */
 QDataStream& operator>>(
-        QDataStream &in,
-        FileInfo &fileInfo
+        QDataStream &in, ///< 데이터 스트림
+        FileInfo &fileInfo ///< 파일 정보 객체
         )
 {
     BondChunkAttr NAME, POS4, CRC3, COMP;
@@ -20,7 +20,10 @@ QDataStream& operator>>(
     return in;
 }
 
-BondChunkHeader FileInfo::FINF()
+/** 파일 정보 청크 헤더를 얻습니다.
+  @return 파일 정보 청크 헤더
+  */
+BondChunkHeader FileInfo::FINF() const
 {
     return FINF_;
 }
@@ -49,11 +52,10 @@ uint FileInfo::CRC3() const
     return CRC3_;
 }
 
-/** 파일에 대한 압축 방법을 얻습니다(0: 저장, 1~: 예약됨).
-  @return 파일에 대한 압축 방법
+/** 파일에 대한 압축 방법을 얻습니다.
+  @return 파일에 대한 압축 방법(0: 저장, 1~: 예약됨)
   */
 uint FileInfo::COMP() const
 {
     return COMP_;
 }
-

@@ -17,13 +17,14 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 #define UFP_HPP
 
 #include <QtGlobal>
+#include <QByteArray>
 
 /*사용자 함수 묶음.\n
   Qt 4.8.0에 기반한 함수들로 재작성됨.
   */
 namespace ufp {
 
-quint32 computeCrc32(const char *data, uint len);
+quint32 computeCrc32(const QByteArray &data);
 
 };
 
