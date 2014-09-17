@@ -19,5 +19,8 @@ DEFINES += \
 
 LIBS    += \
 	-lm \
+	-static \
 	-L'$${PROJECT_DIR_PATH}/$$DESTDIR' -ljxrglue \
 	-L'$${PROJECT_DIR_PATH}/image/$$DESTDIR' -ljpegxr
+
+#PRE_TARGETDEPS += $${PROJECT_DIR_PATH}/$$DESTDIR/libjxrglue.a $${PROJECT_DIR_PATH}/image/$$DESTDIR/libjpegxr.a

@@ -7,7 +7,15 @@ FileDataStorage::~FileDataStorage()
     qDeleteAll(fileDataStorage_);
 }
 
+/** 생성자.
+  */
+FileDataStorage::FileDataStorage() :
+    BODY_("BODY")
+{
+}
+
 /** FileDataStorage 역직렬화 수행자.
+  @throw 포멧 경계가 잘못될 경우 std::exception를 던집니다.
   */
 QDataStream& operator>>(
         QDataStream &in, ///< 데이터 스트림

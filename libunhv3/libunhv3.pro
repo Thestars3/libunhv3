@@ -6,7 +6,9 @@
 
 include( ../common.pri )
 
-include( $$ROOT_PATH/hdp_image_plugin/hdp_image_plugin_include.pri )
+include( bondchunk/bondchunk.pri )
+
+include( unhv3/unhv3.pri )
 
 TEMPLATE = lib
 
@@ -17,30 +19,15 @@ QT       += gui
 VERSION  = $$system(cat $${ROOT_PATH}/version)
 
 HEADERS  += \
-	unhv3.hpp \
-	unhv3_global.hpp \
-    bondchunkheader.hpp \
-    bondchunkattr.hpp \
-    unhv3status.hpp \
-    fileinfo.hpp \
-    fileinfolist.hpp \
-    ufp.hpp \
-    filedatastorage.hpp \
-    filedata.hpp \
-    unhv3event.hpp
+	ufp.hpp
 
 SOURCES  += \
-	unhv3.cpp \
-    bondchunkheader.cpp \
-    bondchunkattr.cpp \
-    fileinfo.cpp \
-    fileinfolist.cpp \
-    ufp.cpp \
-    filedatastorage.cpp \
-    filedata.cpp \
-    unhv3status.cpp \
-    unhv3event.cpp
+	ufp.cpp
+
+QTPLUGIN += hdp_image
 
 DEFINES  += UNHV3_LIBRARY
+
+QMAKE_LIBDIR   += $$ROOT_PATH/hdp_image_plugin/$$DESTDIR
 
 QMAKE_CXXFLAGS += -std=c++0x

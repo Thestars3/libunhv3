@@ -1,14 +1,22 @@
 #include "bondchunkattr.hpp"
 #include "fileinfo.hpp"
 
+/** 생성자.
+  */
+FileInfo::FileInfo() :
+    FINF_("FINF")
+{
+}
+
 /** FileInfo 역직렬화 수행자.
+  @throw 포멧 경계가 잘못될 경우 std::exception를 던집니다.
   */
 QDataStream& operator>>(
         QDataStream &in, ///< 데이터 스트림
         FileInfo &fileInfo ///< 파일 정보 객체
         )
 {
-    BondChunkAttr NAME, POS4, CRC3, COMP;
+    BondChunkAttr NAME("NAME"), POS4("POS4"), CRC3("CRC3"), COMP("COMP");
 
     in >> fileInfo.FINF_ >> NAME >> POS4 >> CRC3 >> COMP;
 

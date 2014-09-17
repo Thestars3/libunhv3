@@ -13,32 +13,33 @@ GNU Lesser General Public License for more details.
 You should have received a copy of the GNU Lesser General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 
-#ifndef FILEINFO_HPP
-#define FILEINFO_HPP
+#ifndef FILEDATA_HPP
+#define FILEDATA_HPP
 
+#include <QByteArray>
 #include <QDataStream>
 #include "bondchunkheader.hpp"
 
-class FileInfo
+class FileData
 {
 private:
-    BondChunkHeader FINF_; ///< File Info
-    QString NAME_;         ///< File Name
-    uint POS4_;            ///< "FILE" chunk position of file
-    uint CRC3_;            ///< crc32 of file data
-    uint COMP_;            ///< Compression Method of file(0: store, 1~: reserved)
-    friend QDataStream& operator>>(QDataStream &in, FileInfo &fileInfo);
+    BondChunkHeader FILE_;    ///< 파일 데이터 청크, 속성청크는 가지지 않는다.
+    quint64 raw_data_pos;     ///< 파일 상에서의 데이터 시작 위치
+    uint raw_data_len;        ///< 데이터 크기
+    quint64 pos_;             ///< 이 청크의 시작 오프셋.
+    QDataStream *fileStream_; ///< 파일 스트림 객체 포인터
+    friend QDataStream& operator>>(QDataStream &in, FileData &fileData);
 
 public:
+    FileData();
+
     // < -- Getter -- >
-    BondChunkHeader FINF() const;
-    QString NAME() const;
-    uint POS4() const;
-    uint CRC3() const;
-    uint COMP() const;
+    quint64 pos() const;
+    BondChunkHeader FILE() const;
+    QByteArray raw_data() const;
 
 };
 
-QDataStream& operator>>(QDataStream &in, FileInfo &fileInfo);
+QDataStream& operator>>(QDataStream &in, FileData &fileData);
 
-#endif // FILEINFO_HPP
+#endif // FILEDATA_HPP

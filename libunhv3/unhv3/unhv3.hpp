@@ -31,7 +31,7 @@ class Unhv3Event;
 
 /** hv3(꿀뷰 전용 포멧)을 풀어줍니다.\n
   이 클래스의 멤버 중 `[A-Z0-9]{4}_'형식으로 된 이름은 청크명, 청크 속성명입니다.\n
-  <a href="http://www.kippler.com/doc/bond/BondFormat.txt">BondFormat Specification v1.0</a>를 참고하여 만들었습니다.\n
+  포멧 구조에 대한 상세는 <a href="http://www.kippler.com/doc/bond/BondFormat.txt">BondFormat Specification v1.0</a>를 참고하세요.\n
   고정된 청크 배치를 읽도록 하였으므로, 속성의 개수나 속성의 위치가 바뀐다면 소스를 수정해야 합니다.\n
   */
 class UNHV3SHARED_EXPORT Unhv3
@@ -43,9 +43,9 @@ public:
     bool setEvent(Unhv3Event *event);
 
     // < -- 상태 확인 -- >
-    bool testArchive();
+    bool testArchive() const;
     bool isOpened() const;
-    bool isBrokenArchive();
+    bool isBrokenArchive() const;
     Unhv3Status lastError() const;
     const FileInfo* getFileItem(int index) const;
 
@@ -56,9 +56,9 @@ public:
     QString filePathName() const;
 
     // < -- 압축 풀기 -- >
-    bool extractAllTo(const QString &savePath);
-    bool extractOneTo(int index, const QString &savePath);
-    bool extractOneAs(int index, const QString &filePathName);
+    bool extractAllTo(const QString &savePath) const;
+    bool extractOneTo(int index, const QString &savePath) const;
+    bool extractOneAs(int index, const QString &filePathName) const;
 
     // < -- 메타 정보 -- >
     uint      direction() const;
@@ -81,11 +81,11 @@ protected:
     void clear();
 
 private:
-    Unhv3Event *event_;      ///< 이벤트 처리자.
-    bool openStatus;         ///< 파일 열림 여부.
-    QFile file;              ///< 파일 객체
-    QDataStream fileStream_; ///< 파일 스트림
-    Unhv3Status status;      ///< 객체 상태
+    Unhv3Event *event_;         ///< 이벤트 처리자.
+    bool openStatus;            ///< 파일 열림 여부.
+    QFile file;                 ///< 파일 객체
+    QDataStream fileStream_;    ///< 파일 스트림
+    mutable Unhv3Status status; ///< 객체 상태
 
     // < -- HV3 File Data -- >
     BondChunkHeader HV30_; ///< HV3 파일임을 의미

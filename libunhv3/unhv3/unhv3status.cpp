@@ -51,9 +51,15 @@ QString Unhv3Status::message() const
 
     case SAVE_FILE_ERROR:
         return QString::fromUtf8("파일을 쓰는데 실패했습니다.");
+
+    case IS_BROKEN_FILE:
+        return QString::fromUtf8("파일이 손상되어 있습니다.");
+
+    case CHANGE_DIR_FAILE:
+        return QString::fromUtf8("작업 위치에 접근하는데 문제가 있습니다.");
     }
 
-    return QString::fromUtf8("알 수 없는 오류 코드입니다.");
+    return QString::fromUtf8("알 수 없는 상태 코드입니다.");
 }
 
 /** 생성자.

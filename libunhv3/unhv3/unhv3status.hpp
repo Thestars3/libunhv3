@@ -32,7 +32,9 @@ public:
         SAVEPATH_NOT_EXIST,   ///< 지정된 저장 경로가 존재하지 않음.
         SAVEPATH_IS_NOT_DIR,  ///< 지정된 저장 경로는 폴더가 아닙니다.
         NOT_YET_IMPELEMENTED, ///< 아직 구현되지 않은 기능입니다.
-        SAVE_FILE_ERROR       ///< 파일 쓰기 실패.
+        SAVE_FILE_ERROR,      ///< 파일 쓰기 실패.
+        IS_BROKEN_FILE,       ///< 손상된 파일
+        CHANGE_DIR_FAILE      ///< 디렉토리 이동에 실패.
     };
     Unhv3Status(Status status);
     Unhv3Status& operator=(const Status &status);

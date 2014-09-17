@@ -1,6 +1,15 @@
 #include <QTextCodec>
 #include "bondchunkattr.hpp"
 
+/** 생성자.
+  */
+BondChunkAttr::BondChunkAttr(
+        const QString &attrName
+        )
+{
+    attrName_ = attrName;
+}
+
 /** hv3 포멧의 GUID 타입을 QUuid 타입으로 저장합니다.\n
   마이크로스트社에서 UUID 표준을 구현한 것이 GUID이며, 데이터 구조상으로 UUID와 동일하다.
   @return QUuid
@@ -76,6 +85,7 @@ QDateTime BondChunkAttr::fromFiletime() const
 const QTextCodec *BondChunkAttr::textCodec = QTextCodec::codecForName("UCS-2 LE");
 
 /** BondChunkAttr 역직렬화 수행자.
+  @throw 포멧 경계가 잘못될 경우 std::exception를 던집니다.
   */
 QDataStream& operator>>(
         QDataStream &in, ///< 데이터 스트림
@@ -87,7 +97,9 @@ QDataStream& operator>>(
     quint8 *attrData;     // 속성 데이터. attrDataSize_ 만큼의 크기를 가진다.
 
     in.readRawData(attrName, 4);
-    bondChunkAttr.attrName_ = attrName;
+    if ( bondChunkAttr.attrName_ != attrName ) {
+        throw std::exception();
+    }
 
     in >> attrDataSize;
 

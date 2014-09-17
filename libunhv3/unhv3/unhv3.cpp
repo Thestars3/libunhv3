@@ -7,6 +7,8 @@
 #include "ufp.hpp"
 #include "unhv3.hpp"
 
+Q_IMPORT_PLUGIN(hdp_image)
+
 /** 압축 해제중 발생하는 여러가지 이벤트를 받아서 처리하고 싶을 경우, 이벤트를 콜백으로 받을 객체를 지정합니다.
   @return 성공여부.
   */
@@ -28,8 +30,10 @@ bool Unhv3::setEvent(
 Unhv3::Unhv3() :
     openStatus(false),
     status(Unhv3Status::NO_ERROR),
+    HV30_("HV30"),
     VERS_(0),
     FSIZ_(0),
+    HEAD_("HEAD"),
     DIRE_(0),
     ENCR_(0),
     COPY_(QString::null),
@@ -56,7 +60,7 @@ Unhv3Status Unhv3::lastError() const
 /** 메모리로 직접 해제해 보면서 파일의 손상 여부를 확인합니다.
   @return 파일의 손상여부
   */
-bool Unhv3::testArchive()
+bool Unhv3::testArchive() const
 {
     status = Unhv3Status::NOT_YET_IMPELEMENTED;
     return false;
@@ -65,9 +69,12 @@ bool Unhv3::testArchive()
 /** open 메소드로 파일을 분석 할때, 체크썸이 올바른지 확인합니다.
   @return 파일 손상 여부
   */
-bool Unhv3::isBrokenArchive()
+bool Unhv3::isBrokenArchive() const
 {
-    status = Unhv3Status::NOT_YET_IMPELEMENTED;
+    if ( FSIZ_ != file.size()  ) {
+        return true;
+    }
+
     return false;
 }
 
@@ -98,10 +105,10 @@ void Unhv3::clear()
 {
     file.close();
     openStatus = false;
-    HV30_ = BondChunkHeader();
+    HV30_ = BondChunkHeader("HV30");
     VERS_ = 0;
     FSIZ_ = 0;
-    HEAD_ = BondChunkHeader();
+    HEAD_ = BondChunkHeader("HEAD");
     GUID_ = QUuid();
     UUID_ = QUuid();
     FTIM_ = QDateTime();
@@ -126,7 +133,7 @@ void Unhv3::clear()
   */
 bool Unhv3::extractAllTo(
         const QString &savePath ///< 저장 경로
-        )
+        ) const
 {
     QFileInfo pathInfo(savePath);
 
@@ -145,15 +152,22 @@ bool Unhv3::extractAllTo(
     }
 
     int max = fileItemCount();
-    QDir pwd = QDir::currentPath();
-    pwd.cd(savePath);
-    for(int i = 0; i < max; i++) {
-        const FileInfo *fileInfo = getFileItem(i);
-        QString fileName = fileInfo->NAME();
-        extractOneAs(i, fileName);
+    QDir pwd = QDir::current();
+
+    if ( ! QDir::current().cd(savePath) ) {
+        status = Unhv3Status::CHANGE_DIR_FAILE;
+        return false;
+    }
+
+    for (int i = 0; i < max; i++) {
+        extractOneAs(i, getFileItem(i)->NAME());
     }
     event_->setComplete();
-    pwd.cd(".");
+
+    if ( ! pwd.cd(".") ) {
+        status = Unhv3Status::CHANGE_DIR_FAILE;
+        return false;
+    }
 
     return true;
 }
@@ -318,10 +332,25 @@ const FileInfo* Unhv3::getFileItem(
 bool Unhv3::extractOneTo(
         int index,
         const QString &savePath ///< 저장될 경로
-        )
+        ) const
 {
-    QString filePathName = savePath + "/" + getFileItem(index)->NAME();
-    return extractOneAs(index, filePathName);
+    QDir pwd = QDir::current();
+
+    if ( ! QDir::current().cd(savePath) ) {
+        status = Unhv3Status::CHANGE_DIR_FAILE;
+        return false;
+    }
+
+    if ( ! extractOneAs(index, getFileItem(index)->NAME()) ) {
+        return false;
+    }
+
+    if ( ! pwd.cd(".") ) {
+        status = Unhv3Status::CHANGE_DIR_FAILE;
+        return false;
+    }
+
+    return true;
 }
 
 /** 압축파일내의 한개의 파일만을 풀때 사용합니다. \n
@@ -331,7 +360,7 @@ bool Unhv3::extractOneTo(
 bool Unhv3::extractOneAs(
         int index,
         const QString &filePathName ///< 저장될 파일의 이름을 포함한 경로
-        )
+        ) const
 {
     const FileInfo *fileItem = LIST_.getFileItem(index);
     uint pos = fileItem->POS4();
@@ -426,9 +455,15 @@ bool Unhv3::open(
         return false;
     }
 
-    BondChunkAttr VERS, FSIZ, GUID, UUID, FTIM, DIRE, COPY, ENCR, LINK, TITL, ISBN, WRTR, PUBL, DATE, COMT, MAKR, GENR;
+    BondChunkAttr VERS("VERS"), FSIZ("FSIZ"), GUID("GUID"), UUID("UUID"), FTIM("FTIM"), DIRE("DIRE"), COPY("COPY"), ENCR("ENCR"), LINK("LINK"), TITL("TITL"), ISBN("ISBN"), WRTR("WRTR"), PUBL("PUBL"), DATE("DATE"), COMT("COMT"), MAKR("MAKR"), GENR("GENR");
 
-    fileStream_ >> VERS >> FSIZ >> HEAD_ >> GUID >> UUID >> FTIM >> DIRE >> ENCR >> COPY >> LINK >> TITL >> ISBN >> WRTR >> PUBL >> DATE >> COPY >> COMT >> MAKR >> GENR >> LIST_ >> BODY_;
+    try {
+        fileStream_ >> VERS >> FSIZ >> HEAD_ >> GUID >> UUID >> FTIM >> DIRE >> ENCR >> COPY >> LINK >> TITL >> ISBN >> WRTR >> PUBL >> DATE >> COPY >> COMT >> MAKR >> GENR >> LIST_ >> BODY_;
+    }
+    catch (std::exception&) {
+        status = Unhv3Status::IS_BROKEN_FILE;
+        return false;
+    }
 
     VERS_ = VERS.fromDword();
     FSIZ_ = FSIZ.fromDword();

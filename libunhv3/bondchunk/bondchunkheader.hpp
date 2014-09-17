@@ -30,6 +30,8 @@ private:
     friend QDataStream& operator>>(QDataStream &in, BondChunkHeader &bondChunkHeader);
 
 public:
+    explicit BondChunkHeader(const QString &chunkName);
+
     const static uint CHUNK_SIZE; ///< 청크 자체의 크기
 
     // < -- Getter -- >

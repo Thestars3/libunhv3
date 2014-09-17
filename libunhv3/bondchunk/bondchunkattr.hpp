@@ -32,6 +32,8 @@ private:
     friend QDataStream& operator>>(QDataStream &in, BondChunkAttr &bondChunkAttr);
 
 public:
+    BondChunkAttr(const QString &attrName);
+
     // < -- Getter -- >
     QString attrName() const;
     QByteArray attrData() const;

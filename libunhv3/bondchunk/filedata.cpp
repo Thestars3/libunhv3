@@ -1,7 +1,15 @@
 #include <QFile>
 #include "filedata.hpp"
 
+/** 생성자.
+  */
+FileData::FileData() :
+    FILE_("FILE")
+{
+}
+
 /** FileData 역직렬화 수행자.
+  @throw 포멧 경계가 잘못될 경우 std::exception를 던집니다.
   */
 QDataStream& operator>>(
         QDataStream &in, ///< 데이터 스트림

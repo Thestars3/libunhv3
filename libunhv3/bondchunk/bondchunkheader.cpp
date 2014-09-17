@@ -2,7 +2,17 @@
 
 const uint BondChunkHeader::CHUNK_SIZE = 16;
 
+/** 생성자.
+  */
+BondChunkHeader::BondChunkHeader(
+        const QString &chunkName
+        )
+{
+    chunkName_ = chunkName;
+}
+
 /** BondChunkHeader 역직렬화 수행자.
+  @throw 포멧 경계가 잘못될 경우 std::exception를 던집니다.
   */
 QDataStream& operator>>(
         QDataStream &in, ///< 데이터 스트림
@@ -11,7 +21,9 @@ QDataStream& operator>>(
 {
     char chunkName[5] = {'\0',};
     in.readRawData(chunkName, 4);
-    bondChunkHeader.chunkName_ = chunkName;
+    if ( bondChunkHeader.chunkName_ != chunkName ) {
+        throw std::exception();
+    }
 
     in >> bondChunkHeader.attrSize_;
     in >> bondChunkHeader.subChunkSize_;

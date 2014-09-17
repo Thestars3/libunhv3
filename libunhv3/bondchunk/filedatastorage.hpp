@@ -13,31 +13,28 @@ GNU Lesser General Public License for more details.
 You should have received a copy of the GNU Lesser General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 
-#ifndef FILEDATA_HPP
-#define FILEDATA_HPP
+#ifndef FILEDATASTORAGE_HPP
+#define FILEDATASTORAGE_HPP
 
-#include <QByteArray>
+#include <QVector>
 #include <QDataStream>
 #include "bondchunkheader.hpp"
+#include "filedata.hpp"
 
-class FileData
+class FileDataStorage
 {
 private:
-    BondChunkHeader FILE_;    ///< 파일 데이터 청크, 속성청크는 가지지 않는다.
-    quint64 raw_data_pos;     ///< 파일 상에서의 데이터 시작 위치
-    uint raw_data_len;        ///< 데이터 크기
-    quint64 pos_;             ///< 이 청크의 시작 오프셋.
-    QDataStream *fileStream_; ///< 파일 스트림 객체 포인터
-    friend QDataStream& operator>>(QDataStream &in, FileData &fileData);
+    BondChunkHeader BODY_;               ///< 파일데이터를 담는 청크, 속성 청크는 가지지 않으며, 여러개의 하위 FILE 청크를 가진다.
+    QVector<FileData*> fileDataStorage_; ///< 파일 데이터 컨테이너
+    friend QDataStream& operator>>(QDataStream &in, FileDataStorage &fileDataStorage);
 
 public:
-    // < -- Getter -- >
-    quint64 pos() const;
-    BondChunkHeader FILE() const;
-    QByteArray raw_data() const;
+    const FileData* getFileData(uint pos) const;
+    ~FileDataStorage();
+    FileDataStorage();
 
 };
 
-QDataStream& operator>>(QDataStream &in, FileData &fileData);
+QDataStream& operator>>(QDataStream &in, FileDataStorage &fileDataStorage);
 
-#endif // FILEDATA_HPP
+#endif // FILEDATASTORAGE_HPP

@@ -13,27 +13,34 @@ GNU Lesser General Public License for more details.
 You should have received a copy of the GNU Lesser General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 
-#ifndef FILEDATASTORAGE_HPP
-#define FILEDATASTORAGE_HPP
+#ifndef FILEINFO_HPP
+#define FILEINFO_HPP
 
-#include <QVector>
 #include <QDataStream>
 #include "bondchunkheader.hpp"
-#include "filedata.hpp"
 
-class FileDataStorage
+class FileInfo
 {
 private:
-    BondChunkHeader BODY_;               ///< 파일데이터를 담는 청크, 속성 청크는 가지지 않으며, 여러개의 하위 FILE 청크를 가진다.
-    QVector<FileData*> fileDataStorage_; ///< 파일 데이터 컨테이너
-    friend QDataStream& operator>>(QDataStream &in, FileDataStorage &fileDataStorage);
+    BondChunkHeader FINF_; ///< File Info
+    QString NAME_;         ///< File Name
+    uint POS4_;            ///< "FILE" chunk position of file
+    uint CRC3_;            ///< crc32 of file data
+    uint COMP_;            ///< Compression Method of file(0: store, 1~: reserved)
+    friend QDataStream& operator>>(QDataStream &in, FileInfo &fileInfo);
 
 public:
-    const FileData* getFileData(uint pos) const;
-    ~FileDataStorage();
+    FileInfo();
+
+    // < -- Getter -- >
+    BondChunkHeader FINF() const;
+    QString NAME() const;
+    uint POS4() const;
+    uint CRC3() const;
+    uint COMP() const;
 
 };
 
-QDataStream& operator>>(QDataStream &in, FileDataStorage &fileDataStorage);
+QDataStream& operator>>(QDataStream &in, FileInfo &fileInfo);
 
-#endif // FILEDATASTORAGE_HPP
+#endif // FILEINFO_HPP
