@@ -6,6 +6,8 @@
 
 include( ../common.pri )
 
+include( $$ROOT_PATH/hdp_image_plugin/hdp_image_plugin_include.pri )
+
 include( bondchunk/bondchunk.pri )
 
 include( unhv3/unhv3.pri )
@@ -24,10 +26,6 @@ HEADERS  += \
 SOURCES  += \
 	ufp.cpp
 
-QTPLUGIN += hdp_image
-
 DEFINES  += UNHV3_LIBRARY
-
-QMAKE_LIBDIR   += $$ROOT_PATH/hdp_image_plugin/$$DESTDIR
 
 QMAKE_CXXFLAGS += -std=c++0x

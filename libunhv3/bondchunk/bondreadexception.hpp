@@ -13,20 +13,17 @@ GNU Lesser General Public License for more details.
 You should have received a copy of the GNU Lesser General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 
-#ifndef UFP_HPP
-#define UFP_HPP
+#ifndef BONDREADEXCEPTION_HPP
+#define BONDREADEXCEPTION_HPP
 
-#include <QtGlobal>
-#include <QByteArray>
+#include <exception>
 
-/*사용자 함수 묶음.\n
-  Qt 4.8.0에 기반한 함수들로 재작성됨.
-  */
-namespace ufp {
+class BondReadException :
+        public std::exception
+{
+public:
+    virtual const char* what() const throw();
 
-quint32 computeCrc32(const QByteArray &data);
-bool readBytes(QDataStream &in, QByteArray &data, uint len);
+};
 
-}
-
-#endif // UFP_HPP
+#endif // BONDREADEXCEPTION_HPP

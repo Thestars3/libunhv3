@@ -26,24 +26,34 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 class BondChunkAttr
 {
 private:
-    const static class QTextCodec *textCodec; /// 텍스트 변환 코덱
+    static class QTextCodec *textCodec; /// 텍스트 변환 코덱
     QString attrName_;       ///< 속성의 이름.
     QByteArray attrData_;    ///< 속성 데이터.
     friend QDataStream& operator>>(QDataStream &in, BondChunkAttr &bondChunkAttr);
 
 public:
-    BondChunkAttr(const QString &attrName);
+    const static uint CHUNK_SIZE; ///< 속성 청크에서 속성 데이터의 크기를 제외한 크기.
+
+    BondChunkAttr();
+
+    /** 이 청크 자체의 크기를 반환합니다.
+      @return 이 청크의 전체 크기
+      */
+    inline uint chunkSize() const
+    {
+        return attrData_.size() + CHUNK_SIZE;
+    }
 
     // < -- Getter -- >
     QString attrName() const;
     QByteArray attrData() const;
 
     // < -- 변환 메소드 -- >
-    QString fromString() const;
-    QDateTime fromFiletime() const;
-    uint fromDword() const;
-    QUuid fromGuid() const;
-    QUuid fromUuid() const;
+    QString convertFromString() const;
+    QDateTime convertFromFiletime() const;
+    uint convertFromDword() const;
+    QUuid convertFromGuid() const;
+    QUuid convertFromUuid() const;
 
 };
 

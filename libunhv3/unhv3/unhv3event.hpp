@@ -58,26 +58,21 @@ struct SArkFileItem {
 
 class Unhv3Event
 {
-private:
-    SArkProgressInfo *progressInfo;
-    SArkFileItem *fileItem;
-
 public:
-    Unhv3Event();
-    ~Unhv3Event();
-
+    void setOpen();
+    void setStartFile(const QString &filePath);
     void setError(const QString &filePathName, const Unhv3Status &status);
     void setProgress(float progress);
     void setComplete();
+    QString convertDuplicatedName(const QString &filePath);
 
-    virtual void OnStartFile(const SArkFileItem *pFileItem, BOOL32 &bStopCurrent, BOOL32 &bStopAll, int index);
-    virtual void OnProgressFile(const SArkProgressInfo *pProgressInfo, BOOL32 &bStopCurrent, BOOL32 &bStopAll);
-    virtual void OnCompleteFile(const SArkProgressInfo *pProgressInfo, ARKERR nErr);
-    virtual void OnError(ARKERR nErr, const SArkFileItem *pFileItem, BOOL32 bIsWarning, BOOL32 &bStopAll);
-    virtual void OnAskOverwrite(const SArkFileItem *pFileItem, LPCWSTR szLocalPathName, ARK_OVERWRITE_MODE &overwrite, WCHAR pathName2Rename[ARK_MAX_PATH]);
+    virtual void OnOpening(const SArkFileItem *pFileItem, float progress, BOOL32 &bStop) = 0;
+    virtual void OnStartFile(const SArkFileItem *pFileItem, BOOL32 &bStopCurrent, BOOL32 &bStopAll, int index) = 0;
+    virtual void OnProgressFile(const SArkProgressInfo *pProgressInfo, BOOL32 &bStopCurrent, BOOL32 &bStopAll) = 0;
+    virtual void OnCompleteFile(const SArkProgressInfo *pProgressInfo, ARKERR nErr) = 0;
+    virtual void OnError(ARKERR nErr, const SArkFileItem *pFileItem, BOOL32 bIsWarning, BOOL32 &bStopAll) = 0;
+    virtual void OnAskOverwrite(const SArkFileItem *pFileItem, LPCWSTR szLocalPathName, ARK_OVERWRITE_MODE &overwrite, WCHAR pathName2Rename[ARK_MAX_PATH]) = 0;
 
 };
-
-#undef ARK_MAX_PATH
 
 #endif // UNHV3EVENT_HPP

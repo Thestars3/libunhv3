@@ -9,21 +9,37 @@ FileInfo::FileInfo() :
 }
 
 /** FileInfo 역직렬화 수행자.
-  @throw 포멧 경계가 잘못될 경우 std::exception를 던집니다.
+  @throw 포멧 경계가 잘못된 경우 BondReadException를 던집니다.
   */
 QDataStream& operator>>(
         QDataStream &in, ///< 데이터 스트림
         FileInfo &fileInfo ///< 파일 정보 객체
         )
 {
-    BondChunkAttr NAME("NAME"), POS4("POS4"), CRC3("CRC3"), COMP("COMP");
+    in >> fileInfo.FINF_;
 
-    in >> fileInfo.FINF_ >> NAME >> POS4 >> CRC3 >> COMP;
+    quint32 max = fileInfo.FINF_.attrSize();
+    quint32 s = 0;
+    BondChunkAttr attr;
+    while ( s < max ) {
+        in >> attr;
 
-    fileInfo.NAME_ = NAME.fromString();
-    fileInfo.POS4_ = POS4.fromDword();
-    fileInfo.CRC3_ = CRC3.fromDword();
-    fileInfo.COMP_ = COMP.fromDword();
+        QString name =  attr.attrName();
+        if ( name == "NAME" ) {
+            fileInfo.NAME_ = attr.convertFromString();
+        }
+        else if ( name == "POS4" ) {
+            fileInfo.POS4_ = attr.convertFromDword();
+        }
+        else if ( name == "CRC3" ) {
+            fileInfo.CRC3_ = attr.convertFromDword();
+        }
+        else if ( name == "COMP" ) {
+            fileInfo.COMP_ = attr.convertFromDword();
+        }
+
+        s += attr.chunkSize();
+    }
 
     return in;
 }

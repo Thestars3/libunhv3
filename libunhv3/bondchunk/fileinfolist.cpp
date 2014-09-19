@@ -3,7 +3,7 @@
 #include "fileinfolist.hpp"
 
 /** FileInfoList 역직렬화 수행자.
-  @throw 포멧 경계가 잘못될 경우 std::exception를 던집니다.
+  @throw 포멧 경계가 잘못된 경우 BondReadException를 던집니다.
   */
 QDataStream& operator>>(
         QDataStream &in, ///< 데이터 스트림
@@ -11,14 +11,22 @@ QDataStream& operator>>(
         )
 {
     in >> fileInfoList.LIST_;
-    uint restSize = fileInfoList.LIST_.subChunkSize();
-    while ( restSize > 0 ) {
+    uint size = 0;
+    uint max = fileInfoList.LIST_.subChunkSize();
+    while ( size < max ) {
         FileInfo *fileInfo = new FileInfo();
-        in >> *fileInfo;
+        in >> (*fileInfo);
         fileInfoList.fileInfoList_.push_back(fileInfo);
-        restSize -= fileInfo->FINF().subChunkSize() + BondChunkHeader::CHUNK_SIZE;
+        size += fileInfo->FINF().attrSize() + BondChunkHeader::CHUNK_SIZE;
     }
     return in;
+}
+
+/** 생성자.
+  */
+FileInfoList::FileInfoList() :
+    LIST_("LIST")
+{
 }
 
 /** 소멸자.

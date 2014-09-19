@@ -4,14 +4,11 @@
 #
 #-------------------------------------------------
 
-#소스 디렉토리
-PROJECT_DIR_PATH = $$PWD
-
 INCLUDEPATH += \
-	$${PROJECT_DIR_PATH}/jxrgluelib \
-	$${PROJECT_DIR_PATH}/jxrtestlib \
-	$${PROJECT_DIR_PATH}/image/sys \
-	$${PROJECT_DIR_PATH}/common/include
+	$${PWD}/jxrgluelib \
+	$${PWD}/jxrtestlib \
+	$${PWD}/image/sys \
+	$${PWD}/common/include
 
 DEFINES += \
 	__ANSI__ \
@@ -19,8 +16,5 @@ DEFINES += \
 
 LIBS    += \
 	-lm \
-	-static \
-	-L'$${PROJECT_DIR_PATH}/$$DESTDIR' -ljxrglue \
-	-L'$${PROJECT_DIR_PATH}/image/$$DESTDIR' -ljpegxr
-
-#PRE_TARGETDEPS += $${PROJECT_DIR_PATH}/$$DESTDIR/libjxrglue.a $${PROJECT_DIR_PATH}/image/$$DESTDIR/libjpegxr.a
+	-L'$${PWD}/$$DESTDIR' -ljxrglue \
+	-L'$${PWD}/image/$$DESTDIR' -ljpegxr

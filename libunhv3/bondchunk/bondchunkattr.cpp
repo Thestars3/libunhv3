@@ -1,21 +1,19 @@
+#include <QRegExp>
 #include <QTextCodec>
+#include "bondreadexception.hpp"
+#include "ufp.hpp"
 #include "bondchunkattr.hpp"
-
-/** 생성자.
-  */
-BondChunkAttr::BondChunkAttr(
-        const QString &attrName
-        )
-{
-    attrName_ = attrName;
-}
 
 /** hv3 포멧의 GUID 타입을 QUuid 타입으로 저장합니다.\n
   마이크로스트社에서 UUID 표준을 구현한 것이 GUID이며, 데이터 구조상으로 UUID와 동일하다.
-  @return QUuid
+  @return QUuid. 만약, 이 속성 청크에 아무런 정보가 없다면 빈 QUuid를 반환한다.
   */
-QUuid BondChunkAttr::fromGuid() const
+QUuid BondChunkAttr::convertFromGuid() const
 {
+    if ( attrData_.isEmpty() ) {
+        return QUuid();
+    }
+
     QDataStream dataStream(attrData_);
     uint l;
     ushort w1, w2;
@@ -39,10 +37,14 @@ QUuid BondChunkAttr::fromGuid() const
 }
 
 /** hv3 포멧의 UUID 타입을 QUuid 타입으로 저장합니다.
-  @return QUuid
+  @return QUuid. 만약, 이 속성 청크에 아무런 정보가 없다면 빈 QUuid를 반환한다.
   */
-QUuid BondChunkAttr::fromUuid() const
+QUuid BondChunkAttr::convertFromUuid() const
 {
+    if ( attrData_.isEmpty() ) {
+        return QUuid();
+    }
+
     QDataStream dataStream(attrData_);
     QUuid uuid;
     dataStream >> uuid;
@@ -50,29 +52,42 @@ QUuid BondChunkAttr::fromUuid() const
 }
 
 /** hv3 포멧의 DWORD 타입을 uint 타입으로 저장합니다.
-  @return uint
+  @return uint. 만약, 이 속성 청크에 아무런 정보가 없다면 0을 반환한다.
   */
-uint BondChunkAttr::fromDword() const
+uint BondChunkAttr::convertFromDword() const
 {
+    if ( attrData_.isEmpty() ) {
+        return 0;
+    }
+
     QDataStream dataStream(attrData_);
-    quint32 i;
+    dataStream.setByteOrder(QDataStream::LittleEndian);
+    quint32 i = 0;
     dataStream >> i;
     return i;
 }
 
 /** hv3 포멧의 STRING 타입을 QString 타입으로 바꾸어 저장합니다.
-  @return QString
+  @return QString. 만약, 이 속성 청크에 아무런 정보가 없다면 QString::null을 반환한다.
   */
-QString BondChunkAttr::fromString() const
+QString BondChunkAttr::convertFromString() const
 {
-    return textCodec->toUnicode(attrData_);
+    if ( attrData_.isEmpty() ) {
+        return QString::null;
+    }
+
+    return textCodec->toUnicode(attrData_).replace(QRegExp("\\0+$"), "");
 }
 
 /** hv3 포멧의 FILETIME 타입을 QDateTime 타입으로 바꾸어 저장합니다.
-  @return QDateTime
+  @return QDateTime. 만약, 이 속성 청크에 아무런 정보가 없다면 빈 QDateTime을 반환한다.
   */
-QDateTime BondChunkAttr::fromFiletime() const
+QDateTime BondChunkAttr::convertFromFiletime() const
 {
+    if ( attrData_.isEmpty() ) {
+        return QDateTime();
+    }
+
     QDataStream dataStream(attrData_);
     QDateTime dateTime;
     qint32 nYear, nMonth, nDay, nHour, nMin, nSec;
@@ -82,30 +97,38 @@ QDateTime BondChunkAttr::fromFiletime() const
     return dateTime;
 }
 
-const QTextCodec *BondChunkAttr::textCodec = QTextCodec::codecForName("UCS-2 LE");
+BondChunkAttr::BondChunkAttr()
+{
+    if ( textCodec == nullptr ) {
+        textCodec = QTextCodec::codecForName("UTF-16 LE");
+    }
+}
+
+const uint BondChunkAttr::CHUNK_SIZE = 8;
+
+QTextCodec *BondChunkAttr::textCodec = nullptr;
 
 /** BondChunkAttr 역직렬화 수행자.
-  @throw 포멧 경계가 잘못될 경우 std::exception를 던집니다.
+  @throw 포멧 경계가 잘못된 경우 BondReadException를 던집니다.
   */
 QDataStream& operator>>(
         QDataStream &in, ///< 데이터 스트림
         BondChunkAttr &bondChunkAttr ///< BOND 포멧 속성 청크 객체
         )
 {
-    char attrName[5] = {'\0',};
-    quint32 attrDataSize; // 속성 정보의 크기
-    quint8 *attrData;     // 속성 데이터. attrDataSize_ 만큼의 크기를 가진다.
+    char attrName[5] = {'\0',};  // 속성의 이름
+    quint32 attrDataSize = 0;    // 속성 정보의 크기
 
-    in.readRawData(attrName, 4);
-    if ( bondChunkAttr.attrName_ != attrName ) {
-        throw std::exception();
+    if ( in.readRawData(attrName, 4) == -1 ) {
+        throw BondReadException();
     }
+    bondChunkAttr.attrName_ = attrName;
 
     in >> attrDataSize;
 
-    in.readBytes(reinterpret_cast<char*&>(attrData), attrDataSize);
-    bondChunkAttr.attrData_.setRawData(reinterpret_cast<const char*>(attrData), attrDataSize);
-    delete attrData;
+    if ( ! ufp::readBytes(in, bondChunkAttr.attrData_, attrDataSize) ) {
+        throw BondReadException();
+    }
 
     return in;
 }

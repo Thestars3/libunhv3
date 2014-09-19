@@ -27,7 +27,6 @@ private:
     quint64 raw_data_pos;     ///< 파일 상에서의 데이터 시작 위치
     uint raw_data_len;        ///< 데이터 크기
     quint64 pos_;             ///< 이 청크의 시작 오프셋.
-    QDataStream *fileStream_; ///< 파일 스트림 객체 포인터
     friend QDataStream& operator>>(QDataStream &in, FileData &fileData);
 
 public:
@@ -36,7 +35,7 @@ public:
     // < -- Getter -- >
     quint64 pos() const;
     BondChunkHeader FILE() const;
-    QByteArray raw_data() const;
+    QByteArray raw_data(class QFile *device) const;
 
 };
 

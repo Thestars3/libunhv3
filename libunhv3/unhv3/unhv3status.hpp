@@ -16,12 +16,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 #ifndef UNHV3STATUS_HPP
 #define UNHV3STATUS_HPP
 
+#include <QObject>
 #include <QString>
 
 /** unhv3 작업 상태.
   */
-class Unhv3Status
+class Unhv3Status :
+        private QObject
 {
+    Q_OBJECT
+
 public:
     enum Status {
         NO_ERROR,             ///< 오류 없음
@@ -34,12 +38,14 @@ public:
         NOT_YET_IMPELEMENTED, ///< 아직 구현되지 않은 기능입니다.
         SAVE_FILE_ERROR,      ///< 파일 쓰기 실패.
         IS_BROKEN_FILE,       ///< 손상된 파일
-        CHANGE_DIR_FAILE      ///< 디렉토리 이동에 실패.
+        CHANGE_DIR_FAILE,     ///< 디렉토리 이동에 실패.
+        TARGET_IS_DIR         ///< 저장 경로로 지정된 타겟이 디렉토리입니다.
     };
-    Unhv3Status(Status status);
+    explicit Unhv3Status(Status status);
+    Unhv3Status(const Unhv3Status &unhv3Status);
     Unhv3Status& operator=(const Status &status);
     QString message() const;
-    Status statusCode() const;
+    Status status() const;
 
 private:
     Status status_; ///< 상태 코드

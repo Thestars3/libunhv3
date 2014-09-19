@@ -1,4 +1,6 @@
 #include <QFile>
+#include "ufp.hpp"
+#include "bondreadexception.hpp"
 #include "filedata.hpp"
 
 /** 생성자.
@@ -9,7 +11,7 @@ FileData::FileData() :
 }
 
 /** FileData 역직렬화 수행자.
-  @throw 포멧 경계가 잘못될 경우 std::exception를 던집니다.
+  @throw 포멧 경계가 잘못된 경우 BondReadException를 던집니다.
   */
 QDataStream& operator>>(
         QDataStream &in, ///< 데이터 스트림
@@ -24,9 +26,9 @@ QDataStream& operator>>(
     // raw_data
     fileData.raw_data_pos = in.device()->pos();
     fileData.raw_data_len = len;
-    in.skipRawData(len);
-
-    fileData.fileStream_ = &in;
+    if ( in.skipRawData(len) == -1 ) {
+        throw BondReadException();
+    }
 
     return in;
 }
@@ -40,17 +42,23 @@ BondChunkHeader FileData::FILE() const
 }
 
 /** 파일 데이터를 얻습니다.
+  @throw 파일 경계가 잘못되었을 경우 BondReadException를 던집니다.
   @return 파일 데이터.
   */
-QByteArray FileData::raw_data() const
+QByteArray FileData::raw_data(
+        QFile *device ///< 읽어올 파일이 저장된 장치
+        ) const
 {
-    char *data = nullptr;
     QByteArray raw_data;
+    QDataStream fileStream(device);
+    fileStream.setByteOrder(QDataStream::ByteOrder::LittleEndian);
 
-    fileStream_->device()->seek(raw_data_pos);
-    fileStream_->readBytes(data, const_cast<uint&>(raw_data_len));
-    raw_data.setRawData(data, raw_data_len);
-    delete data;
+//    device->seek(raw_data_pos);
+
+    fileStream.device()->seek(raw_data_pos);
+    if ( ! ufp::readBytes(fileStream, raw_data, raw_data_len) ) {
+        throw BondReadException();
+    }
 
     return raw_data;
 }

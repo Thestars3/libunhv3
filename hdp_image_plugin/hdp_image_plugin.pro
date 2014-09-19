@@ -12,9 +12,7 @@ TEMPLATE = lib
 
 TARGET   = hdp_image
 
-CONFIG   += \
-	static \
-	plugin
+CONFIG   += plugin
 
 HEADERS  += \
     hdpimageioplugin.hpp \

@@ -1,13 +1,28 @@
+#include <QFile>
 #include <QBuffer>
 #include <QFileInfo>
 #include <QDataStream>
 #include <QImageReader>
+#include "bondreadexception.hpp"
+#include "bondchunkheader.hpp"
+#include "filedatastorage.hpp"
 #include "bondchunkattr.hpp"
+#include "fileinfolist.hpp"
 #include "unhv3event.hpp"
 #include "ufp.hpp"
 #include "unhv3.hpp"
 
-Q_IMPORT_PLUGIN(hdp_image)
+/** 현재 열려있는 HV3 파일이 암호화된 파일을 포함하고 있는지 여부를 확인합니다.
+  @return 암호화 사용 여부.
+  */
+bool Unhv3::isEncrypted() const
+{
+    if ( ENCR_ != 0 ) {
+        return true;
+    }
+
+    return false;
+}
 
 /** 압축 해제중 발생하는 여러가지 이벤트를 받아서 처리하고 싶을 경우, 이벤트를 콜백으로 받을 객체를 지정합니다.
   @return 성공여부.
@@ -25,28 +40,34 @@ bool Unhv3::setEvent(
     return true;
 }
 
+/** 소멸자.
+  */
+Unhv3::~Unhv3()
+{
+    delete LIST_;
+    delete HV30_;
+    delete HEAD_;
+    delete BODY_;
+    delete file;
+}
+
 /** 생성자.
   */
 Unhv3::Unhv3() :
     openStatus(false),
     status(Unhv3Status::NO_ERROR),
-    HV30_("HV30"),
     VERS_(0),
     FSIZ_(0),
-    HEAD_("HEAD"),
     DIRE_(0),
-    ENCR_(0),
-    COPY_(QString::null),
-    LINK_(QString::null),
-    TITL_(QString::null),
-    ISBN_(QString::null),
-    WRTR_(QString::null),
-    PUBL_(QString::null),
-    DATE_(QString::null),
-    COMT_(QString::null),
-    MAKR_(QString::null),
-    GENR_(QString::null)
+    ENCR_(0)
 {
+    LIST_ = new FileInfoList();
+    BODY_ = new FileDataStorage();
+    HV30_ = new BondChunkHeader("HV30");
+    HEAD_ = new BondChunkHeader("HEAD");
+    file = new QFile();
+    fileStream_.setByteOrder(QDataStream::LittleEndian);
+    event_ = nullptr;
 }
 
 /** 마지막으로 발생한 오류의 상세 내용을 확인한다.
@@ -71,7 +92,7 @@ bool Unhv3::testArchive() const
   */
 bool Unhv3::isBrokenArchive() const
 {
-    if ( FSIZ_ != file.size()  ) {
+    if ( FSIZ_ != file->size()  ) {
         return true;
     }
 
@@ -84,7 +105,7 @@ bool Unhv3::isBrokenArchive() const
 QString Unhv3::filePathName() const
 {
     if ( isOpened() ) {
-        return file.fileName();
+        return file->fileName();
     }
     else {
         return QString::null;
@@ -97,35 +118,6 @@ QString Unhv3::filePathName() const
 bool Unhv3::isOpened() const
 {
     return openStatus;
-}
-
-/** 이 객체의 내용을 초기화합니다.
-  */
-void Unhv3::clear()
-{
-    file.close();
-    openStatus = false;
-    HV30_ = BondChunkHeader("HV30");
-    VERS_ = 0;
-    FSIZ_ = 0;
-    HEAD_ = BondChunkHeader("HEAD");
-    GUID_ = QUuid();
-    UUID_ = QUuid();
-    FTIM_ = QDateTime();
-    DIRE_ = 0;
-    ENCR_ = 0;
-    COPY_ = QString::null;
-    LINK_ = QString::null;
-    TITL_ = QString::null;
-    ISBN_ = QString::null;
-    WRTR_ = QString::null;
-    PUBL_ = QString::null;
-    DATE_ = QString::null;
-    COMT_ = QString::null;
-    MAKR_ = QString::null;
-    GENR_ = QString::null;
-    LIST_ = FileInfoList();
-    BODY_ = FileDataStorage();
 }
 
 /** 지정된 경로에 파일을 모두 푼다.
@@ -147,33 +139,22 @@ bool Unhv3::extractAllTo(
         return false;
     }
 
-    if ( chdir(savePath.toUtf8().constData()) == -1 ) {
-        return false;
+    if ( event_ != nullptr ) {
+        event_->setOpen();
     }
-
     int max = fileItemCount();
-    QDir pwd = QDir::current();
-
-    if ( ! QDir::current().cd(savePath) ) {
-        status = Unhv3Status::CHANGE_DIR_FAILE;
-        return false;
-    }
-
     for (int i = 0; i < max; i++) {
-        extractOneAs(i, getFileItem(i)->NAME());
+        extractOneTo(i, savePath);
     }
-    event_->setComplete();
-
-    if ( ! pwd.cd(".") ) {
-        status = Unhv3Status::CHANGE_DIR_FAILE;
-        return false;
+    if ( event_ != nullptr ) {
+        event_->setComplete();
     }
 
     return true;
 }
 
 /** 현재 열려있는 파일의 파일 크기를 리턴합니다.
-  @return 압축파일의 파일 크기.
+  @return 압축파일의 파일 크기. 만약, 아무 정보도 없다면 빈값을 반환한다.
   */
 uint Unhv3::archiveFileSize() const
 {
@@ -181,7 +162,7 @@ uint Unhv3::archiveFileSize() const
 }
 
 /** 현재 열려있는 파일의 HV3 포맷의 버전 정보를 리턴합니다.
-  @return HV3 포맷의 버전 정보
+  @return HV3 포맷의 버전 정보. 만약, 아무 정보도 없다면 빈값을 반환한다.
   */
 uint Unhv3::formatVersion() const
 {
@@ -189,7 +170,7 @@ uint Unhv3::formatVersion() const
 }
 
 /** 현재 열려있는 파일의 GUID를 리턴합니다.
-  @return 파일의 GUID
+  @return 파일의 GUID. 만약, 아무 정보도 없다면 빈값을 반환한다.
   */
 QUuid Unhv3::archiveGuid() const
 {
@@ -197,7 +178,7 @@ QUuid Unhv3::archiveGuid() const
 }
 
 /** 현재 열려있는 파일의 UUID를 리턴합니다.
-  @return 파일의 UUID
+  @return 파일의 UUID. 만약, 아무 정보도 없다면 빈값을 반환한다.
   */
 QUuid Unhv3::archiveUuid() const
 {
@@ -205,7 +186,7 @@ QUuid Unhv3::archiveUuid() const
 }
 
 /** 현재 열려있는 파일의 만들어진 시간을 리턴합니다.
-  @return 파일이 만들어진 시간
+  @return 파일이 만들어진 시간. 만약, 아무 정보도 없다면 빈값을 반환한다.
   */
 QDateTime Unhv3::createdTime() const
 {
@@ -213,7 +194,7 @@ QDateTime Unhv3::createdTime() const
 }
 
 /** 현재 열려있는 파일의 책의 제본방식을 리턴합니다.
-  @return 책의 제본방식 0: 정보없음, 1:left to right 2:right to left
+  @return 책의 제본방식. 0: 정보없음, 1:left to right 2:right to left. 만약, 아무 정보도 없다면 빈값을 반환한다.
   */
 uint Unhv3::direction() const
 {
@@ -221,7 +202,7 @@ uint Unhv3::direction() const
 }
 
 /** 현재 열려있는 파일의 암호화 방식을 리턴합니다.
-  @return 파일의 암호화 방식, 0:암호화 없음
+  @return 파일의 암호화 방식, 0:암호화 없음. 만약, 아무 정보도 없다면 빈값을 반환한다.
   */
 uint Unhv3::encryptMethod() const
 {
@@ -229,7 +210,7 @@ uint Unhv3::encryptMethod() const
 }
 
 /** 현재 열려있는 파일의 저작권 정보를 리턴합니다.
-  @return 저작권 정보
+  @return 저작권 정보. 만약, 아무 정보도 없다면 빈값을 반환한다.
   */
 QString Unhv3::copyrightInformation() const
 {
@@ -237,7 +218,7 @@ QString Unhv3::copyrightInformation() const
 }
 
 /** 현재 열려있는 파일의 관련 링크 URL을 리턴합니다.
-  @return 관련 링크 URL
+  @return 관련 링크 URL. 만약, 아무 정보도 없다면 빈값을 반환한다.
   */
 QString Unhv3::relatedLink() const
 {
@@ -245,7 +226,7 @@ QString Unhv3::relatedLink() const
 }
 
 /** 현재 열려있는 파일의 제목을 리턴합니다.
-  @return 파일의 제목
+  @return 파일의 제목. 만약, 아무 정보도 없다면 빈값을 반환한다.
   */
 QString Unhv3::fileTitle() const
 {
@@ -253,7 +234,7 @@ QString Unhv3::fileTitle() const
 }
 
 /** 현재 열려있는 파일의 책의 국제 표준 도서 번호 정보를 리턴합니다.
-  @return 책의 ISBN 정보
+  @return 책의 ISBN 정보. 만약, 아무 정보도 없다면 빈값을 반환한다.
   */
 QString Unhv3::isbn() const
 {
@@ -261,7 +242,7 @@ QString Unhv3::isbn() const
 }
 
 /** 현재 열려있는 파일의 원 저작자를 리턴합니다.
-  @return Original Writer
+  @return Original Writer. 만약, 아무 정보도 없다면 빈값을 반환한다.
   */
 QString Unhv3::originalWriter() const
 {
@@ -269,7 +250,7 @@ QString Unhv3::originalWriter() const
 }
 
 /** 현재 열려있는 파일의 출판인을 리턴합니다.
-  @return Publisher
+  @return Publisher. 만약, 아무 정보도 없다면 빈값을 반환한다.
   */
 QString Unhv3::publisher() const
 {
@@ -277,7 +258,7 @@ QString Unhv3::publisher() const
 }
 
 /** 현재 열려있는 파일의 원 출판 날자를 리턴합니다.
-  @return Original Publishing date
+  @return Original Publishing date. 만약, 아무 정보도 없다면 빈값을 반환한다.
   */
 QString Unhv3::originalPublishingDate() const
 {
@@ -285,7 +266,7 @@ QString Unhv3::originalPublishingDate() const
 }
 
 /** 현재 열려있는 파일의 설명을 리턴합니다.
-  @return Comment
+  @return Comment. 만약, 아무 정보도 없다면 빈값을 반환한다.
   */
 QString Unhv3::comment() const
 {
@@ -293,7 +274,7 @@ QString Unhv3::comment() const
 }
 
 /** 현재 열려있는 파일의 제작자를 리턴합니다.
-  @return HV3 File maker
+  @return HV3 File maker. 만약, 아무 정보도 없다면 빈값을 반환한다.
   */
 QString Unhv3::fileMaker() const
 {
@@ -301,7 +282,7 @@ QString Unhv3::fileMaker() const
 }
 
 /** 현재 열려있는 파일의 장르를 리턴합니다.
-  @return Genere
+  @return Genere. 만약, 아무 정보도 없다면 빈값을 반환한다.
   */
 QString Unhv3::genere() const
 {
@@ -313,7 +294,7 @@ QString Unhv3::genere() const
   */
 int Unhv3::fileItemCount() const
 {
-    return LIST_.getFileItemCount();
+    return LIST_->getFileItemCount();
 }
 
 /** 특정 파일 아이템의 정보를 가져옵니다.
@@ -323,7 +304,7 @@ const FileInfo* Unhv3::getFileItem(
         int index ///< 파일 아이템의 인덱스
         ) const
 {
-    return LIST_.getFileItem(index);
+    return LIST_->getFileItem(index);
 }
 
 /** 압축파일내의 한개의 파일만을 풀때 사용합니다.
@@ -331,22 +312,11 @@ const FileInfo* Unhv3::getFileItem(
   */
 bool Unhv3::extractOneTo(
         int index,
-        const QString &savePath ///< 저장될 경로
+        QString savePath ///< 저장될 경로
         ) const
 {
-    QDir pwd = QDir::current();
-
-    if ( ! QDir::current().cd(savePath) ) {
-        status = Unhv3Status::CHANGE_DIR_FAILE;
-        return false;
-    }
-
-    if ( ! extractOneAs(index, getFileItem(index)->NAME()) ) {
-        return false;
-    }
-
-    if ( ! pwd.cd(".") ) {
-        status = Unhv3Status::CHANGE_DIR_FAILE;
+    savePath += "/" + getFileItem(index)->NAME();
+    if ( ! extractOneAs(index, savePath) ) {
         return false;
     }
 
@@ -359,26 +329,66 @@ bool Unhv3::extractOneTo(
   */
 bool Unhv3::extractOneAs(
         int index,
-        const QString &filePathName ///< 저장될 파일의 이름을 포함한 경로
+        QString filePathName ///< 저장될 파일의 이름을 포함한 경로
         ) const
 {
-    const FileInfo *fileItem = LIST_.getFileItem(index);
+    const FileInfo *fileItem = LIST_->getFileItem(index);
     uint pos = fileItem->POS4();
     QByteArray raw_data;
 
-    event_->setProgress(0);
-    raw_data = BODY_.getFileData(pos)->raw_data();
+    if ( event_ != nullptr ) {
+        event_->setStartFile(filePathName);
+        event_->setProgress(0);
+    }
 
-    event_->setProgress(33);
-    if ( ufp::computeCrc32(raw_data) != fileItem->CRC3() ) {
-        status = Unhv3Status::CRC_ERROR;
-        event_->setError(filePathName, status);
+    try {
+        raw_data = BODY_->getFileData(pos)->raw_data(file);
+    }
+    catch (BondReadException&) {
+        status = Unhv3Status::IS_BROKEN_FILE;
         return false;
     }
-    if ( QString::compare(QFileInfo(fileItem->NAME()).suffix(), "hdp", Qt::CaseInsensitive) == 0 ) {
+
+    // < -- 복호화 -- >
+    if ( ENCR_ != 0 ) {
+        int size = raw_data.size();
+        for (int i = 0; i < size; i++) {
+            raw_data[i] = raw_data.at(i) ^ ( i % 256 );
+        }
+    }
+
+    QFileInfo fileInfo(filePathName);
+    if ( fileInfo.exists() ) {
+        if ( fileInfo.isDir() ) {
+            status = Unhv3Status::TARGET_IS_DIR;
+            if ( event_ != nullptr ) {
+                event_->setError(filePathName, status);
+            }
+        }
+        else {
+            if ( event_ != nullptr ) {
+                filePathName = event_->convertDuplicatedName(filePathName);
+            }
+        }
+    }
+
+    if ( event_ != nullptr ) {
+        event_->setProgress(33);
+    }
+    if ( ufp::computeCrc32(raw_data) != fileItem->CRC3() ) {
+        status = Unhv3Status::CRC_ERROR;
+        if ( event_ != nullptr ) {
+            event_->setError(filePathName, status);
+        }
+        return false;
+    }
+
+    if ( QFileInfo(fileItem->NAME()).suffix().compare("hdp", Qt::CaseInsensitive) == 0 ) {
         QBuffer buffer(&raw_data);
         QImage image = QImageReader(&buffer, "HDP").read();
-        event_->setProgress(66);
+        if ( event_ != nullptr ) {
+            event_->setProgress(66);
+        }
 
         bool b = true;
         if ( image.hasAlphaChannel() ) {
@@ -387,35 +397,50 @@ bool Unhv3::extractOneAs(
         else {
             b = image.save(filePathName, "JPEG", 100);
         }
-        event_->setProgress(99);
+        if ( event_ != nullptr ) {
+            event_->setProgress(99);
+        }
 
         if ( ! b ) {
             status = Unhv3Status::SAVE_FILE_ERROR;
-            event_->setError(filePathName, status);
+            if ( event_ != nullptr ) {
+                event_->setError(filePathName, status);
+            }
             return false;
         }
     }
     else {
         QFile file(filePathName);
 
+        if ( event_ != nullptr ) {
+            event_->setProgress(50);
+        }
         if ( ! file.open(QFile::WriteOnly) ) {
             status = Unhv3Status::SAVE_FILE_ERROR;
-            event_->setError(filePathName, status);
+            if ( event_ != nullptr ) {
+                event_->setError(filePathName, status);
+            }
             return false;
         }
 
         if ( file.write(raw_data) == -1 ) {
             status = Unhv3Status::SAVE_FILE_ERROR;
-            event_->setError(filePathName, status);
+            if ( event_ != nullptr ) {
+                event_->setError(filePathName, status);
+            }
             file.close();
             return false;
         }
-        event_->setProgress(99);
+        if ( event_ != nullptr ) {
+            event_->setProgress(99);
+        }
 
         file.close();
     }
 
-    event_->setProgress(100);
+    if ( event_ != nullptr ) {
+        event_->setProgress(100);
+    }
     return true;
 }
 
@@ -426,12 +451,13 @@ bool Unhv3::open(
         const QString &filepath ///< 파일 경로
         )
 {
-    file.close();
-    file.setFileName(filepath);
+    file->close();
+    file->setFileName(filepath);
+    file->open(QIODevice::ReadOnly);
     openStatus = true;
-    fileStream_.setDevice(&file);
+    fileStream_.setDevice(file);
 
-    QFileInfo fileInfo(file);
+    QFileInfo fileInfo(*file);
 
     if ( ! fileInfo.exists() ) {
         status = Unhv3Status::FILE_NOT_EXIST;
@@ -448,40 +474,108 @@ bool Unhv3::open(
         return false;
     }
 
-    fileStream_ >> HV30_;
+    // < -- HV30 -- >
+    {
+        try {
+            fileStream_ >> *HV30_;
+        }
+        catch (BondReadException&) {
+            status = Unhv3Status::NOT_HV3_FORMAT;
+            return false;
+        }
 
-    if ( HV30_.chunkName() != "HV30" ) {
-        status = Unhv3Status::NOT_HV3_FORMAT;
-        return false;
+        quint32 max = HV30_->attrSize();
+        quint32 s = 0;
+        BondChunkAttr attr;
+        while ( s < max ) {
+            fileStream_ >> attr;
+
+            QString name =  attr.attrName();
+            if ( name == "VERS" ) {
+                VERS_ = attr.convertFromDword();
+            }
+            else if ( name == "FSIZ" ) {
+                FSIZ_ = attr.convertFromDword();
+            }
+
+            s += attr.chunkSize();
+        }
     }
 
-    BondChunkAttr VERS("VERS"), FSIZ("FSIZ"), GUID("GUID"), UUID("UUID"), FTIM("FTIM"), DIRE("DIRE"), COPY("COPY"), ENCR("ENCR"), LINK("LINK"), TITL("TITL"), ISBN("ISBN"), WRTR("WRTR"), PUBL("PUBL"), DATE("DATE"), COMT("COMT"), MAKR("MAKR"), GENR("GENR");
+    // < -- HEAD -- >
+    {
+        try {
+            fileStream_ >> *HEAD_;
+        }
+        catch (BondReadException&) {
+            status = Unhv3Status::IS_BROKEN_FILE;
+            return false;
+        }
+
+        quint32 max = HEAD_->attrSize();
+        quint32 s = 0;
+        BondChunkAttr attr;
+        while ( s < max ) {
+            fileStream_ >> attr;
+
+            QString name =  attr.attrName();
+            if ( name == "GUID" ) {
+                GUID_ = attr.convertFromGuid();
+            }
+            else if ( name == "UUID" ) {
+                UUID_ = attr.convertFromUuid();
+            }
+            else if ( name == "FTIM" ) {
+                FTIM_ = attr.convertFromFiletime();
+            }
+            else if ( name == "DIRE" ) {
+                DIRE_ = attr.convertFromDword();
+            }
+            else if ( name == "ENCR" ) {
+                ENCR_ = attr.convertFromDword();
+            }
+            else if ( name == "COPY" ) {
+                COPY_ = attr.convertFromString();
+            }
+            else if ( name == "LINK" ) {
+                LINK_ = attr.convertFromString();
+            }
+            else if ( name == "TITL" ) {
+                TITL_ = attr.convertFromString();
+            }
+            else if ( name == "ISBN" ) {
+                ISBN_ = attr.convertFromString();
+            }
+            else if ( name == "WRTR" ) {
+                WRTR_ = attr.convertFromString();
+            }
+            else if ( name == "PUBL" ) {
+                PUBL_ = attr.convertFromString();
+            }
+            else if ( name == "DATE" ) {
+                DATE_ = attr.convertFromString();
+            }
+            else if ( name == "COMT" ) {
+                COMT_ = attr.convertFromString();
+            }
+            else if ( name == "MAKR" ) {
+                MAKR_ = attr.convertFromString();
+            }
+            else if ( name == "GENR" ) {
+                GENR_ = attr.convertFromString();
+            }
+
+            s += attr.chunkSize();
+        }
+    }
 
     try {
-        fileStream_ >> VERS >> FSIZ >> HEAD_ >> GUID >> UUID >> FTIM >> DIRE >> ENCR >> COPY >> LINK >> TITL >> ISBN >> WRTR >> PUBL >> DATE >> COPY >> COMT >> MAKR >> GENR >> LIST_ >> BODY_;
+        fileStream_ >> *LIST_ >> *BODY_;
     }
-    catch (std::exception&) {
+    catch (BondReadException&) {
         status = Unhv3Status::IS_BROKEN_FILE;
         return false;
     }
-
-    VERS_ = VERS.fromDword();
-    FSIZ_ = FSIZ.fromDword();
-    GUID_ = GUID.fromGuid();
-    UUID_ = UUID.fromUuid();
-    FTIM_ = FTIM.fromFiletime();
-    DIRE_ = DIRE.fromDword();
-    ENCR_ = ENCR.fromDword();
-    COPY_ = COPY.fromString();
-    LINK_ = LINK.fromString();
-    TITL_ = TITL.fromString();
-    ISBN_ = ISBN.fromString();
-    WRTR_ = WRTR.fromString();
-    PUBL_ = PUBL.fromString();
-    DATE_ = DATE.fromString();
-    COMT_ = COMT.fromString();
-    MAKR_ = MAKR.fromString();
-    GENR_ = GENR.fromString();
 
     status = Unhv3Status::NO_ERROR;
     return true;

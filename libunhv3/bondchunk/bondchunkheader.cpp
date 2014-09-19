@@ -1,3 +1,4 @@
+#include "bondreadexception.hpp"
 #include "bondchunkheader.hpp"
 
 const uint BondChunkHeader::CHUNK_SIZE = 16;
@@ -6,13 +7,16 @@ const uint BondChunkHeader::CHUNK_SIZE = 16;
   */
 BondChunkHeader::BondChunkHeader(
         const QString &chunkName
-        )
+        ) :
+    chunkName_(chunkName),
+    attrSize_(0),
+    subChunkSize_(0),
+    chunkDataSize_(0)
 {
-    chunkName_ = chunkName;
 }
 
 /** BondChunkHeader 역직렬화 수행자.
-  @throw 포멧 경계가 잘못될 경우 std::exception를 던집니다.
+  @throw 포멧 경계가 잘못된 경우 BondReadException를 던집니다.
   */
 QDataStream& operator>>(
         QDataStream &in, ///< 데이터 스트림
@@ -20,9 +24,12 @@ QDataStream& operator>>(
         )
 {
     char chunkName[5] = {'\0',};
-    in.readRawData(chunkName, 4);
+
+    if ( in.readRawData(chunkName, 4) == -1 ) {
+        throw BondReadException();
+    }
     if ( bondChunkHeader.chunkName_ != chunkName ) {
-        throw std::exception();
+        throw BondReadException();
     }
 
     in >> bondChunkHeader.attrSize_;
