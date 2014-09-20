@@ -23,3 +23,5 @@ SOURCES  += \
     hdpimageiohandler.cpp
 
 QMAKE_CXXFLAGS += -std=c++0x
+
+DESTDIR = $$DESTDIR/imageformats

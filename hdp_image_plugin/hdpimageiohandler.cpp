@@ -187,7 +187,7 @@ ERR HdpImageIOHandler::PKImageEncode_WritePixels_QImage(
 
     QImage::Format format;
     size_t cbLineM = 0;
-    int size = pIE->uWidth * pIE->uHeight * 4;
+    int size;
 
     // calculate line size in memory and in stream
     cbLineM = pIE->cbPixel * pIE->uWidth;
@@ -195,14 +195,17 @@ ERR HdpImageIOHandler::PKImageEncode_WritePixels_QImage(
     FailIf(cbStride < cbLineM, WMP_errInvalidParameter);
 
     if ( pIE->WMP.bHasAlpha ) {
+        size = pIE->uWidth * pIE->uHeight * 4;
         format = QImage::Format_ARGB32_Premultiplied;
         convertRgbaToArgb(pbPixel, size);
     }
     else {
+        size = pIE->uWidth * pIE->uHeight * 3;
         format = QImage::Format_RGB888;
     }
 
-    *outImage = QImage(pbPixel, pIE->uWidth, pIE->uHeight, cbStride, format);
+    *outImage = QImage(pIE->uWidth, pIE->uHeight, format);
+    qstrncpy(reinterpret_cast<char*>(outImage->bits()), reinterpret_cast<char*>(pbPixel), size);
     pIE->idxCurrentLine += cLine;
 
     // < -- header -- >

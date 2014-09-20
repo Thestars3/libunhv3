@@ -18,60 +18,24 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 
 #include "unhv3status.hpp"
 
-typedef int ARKERR;
-typedef int ARK_OVERWRITE_MODE;
-typedef int ARK_COMPRESSION_METHOD;
-typedef int ARK_ENCRYPTION_METHOD;
-typedef uint ARK_FILEATTR;
-typedef qint64 INT64;
-typedef qint32 BOOL32;
-typedef quint32 UINT32;
-typedef UINT32 ARK_TIME_T;
-typedef wchar_t WCHAR;
-typedef const wchar_t* LPCWSTR;
-typedef char CHAR;
-struct SArkNtfsFileTimes;
-
-struct SArkProgressInfo {
-    float   fCurPercent;
-    float   fTotPercent;
-    int     bCompleting;
-    float   fCompletingPercent;
-};
-
-struct SArkFileItem {
-    CHAR*                   fileName;
-    WCHAR*                  fileNameW;
-    WCHAR*                  fileCommentW;
-    ARK_TIME_T              fileTime;
-    INT64                   compressedSize;
-    INT64                   uncompressedSize;
-    ARK_ENCRYPTION_METHOD   encryptionMethod;
-    ARK_FILEATTR            attrib;
-    UINT32                  crc32;
-    ARK_COMPRESSION_METHOD  compressionMethod;
-    SArkNtfsFileTimes*      ntfsFileTimes;
-    BOOL32                  isUnicodeFileName;
-};
-
-#define ARK_MAX_PATH 300
+class IArkEvent;
 
 class Unhv3Event
 {
+private:
+    IArkEvent *event_; ///< 이벤트 처리 객체 포인터
+
 public:
+    Unhv3Event();
+    void setEvent(IArkEvent *event);
+
+    // < -- 이벤트 -- >
     void setOpen();
     void setStartFile(const QString &filePath);
     void setError(const QString &filePathName, const Unhv3Status &status);
     void setProgress(float progress);
     void setComplete();
     QString convertDuplicatedName(const QString &filePath);
-
-    virtual void OnOpening(const SArkFileItem *pFileItem, float progress, BOOL32 &bStop) = 0;
-    virtual void OnStartFile(const SArkFileItem *pFileItem, BOOL32 &bStopCurrent, BOOL32 &bStopAll, int index) = 0;
-    virtual void OnProgressFile(const SArkProgressInfo *pProgressInfo, BOOL32 &bStopCurrent, BOOL32 &bStopAll) = 0;
-    virtual void OnCompleteFile(const SArkProgressInfo *pProgressInfo, ARKERR nErr) = 0;
-    virtual void OnError(ARKERR nErr, const SArkFileItem *pFileItem, BOOL32 bIsWarning, BOOL32 &bStopAll) = 0;
-    virtual void OnAskOverwrite(const SArkFileItem *pFileItem, LPCWSTR szLocalPathName, ARK_OVERWRITE_MODE &overwrite, WCHAR pathName2Rename[ARK_MAX_PATH]) = 0;
 
 };
 

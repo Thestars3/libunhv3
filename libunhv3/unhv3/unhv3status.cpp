@@ -55,9 +55,6 @@ QString Unhv3Status::message() const
     case IS_BROKEN_FILE:
         return trUtf8("파일이 손상되어 있습니다.");
 
-    case CHANGE_DIR_FAILE:
-        return trUtf8("작업 위치에 접근하는데 문제가 있습니다.");
-
     case TARGET_IS_DIR:
         return trUtf8("저장 경로로 지정된 타겟이 디렉토리입니다.");
     }

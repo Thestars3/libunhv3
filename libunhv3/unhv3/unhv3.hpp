@@ -24,6 +24,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 #include "unhv3_global.hpp"
 
 class QFile;
+class IArkEvent;
 class Unhv3Event;
 class FileInfoList;
 class BondChunkHeader;
@@ -41,7 +42,7 @@ public:
 
     // < -- 압축해제 설정 -- >
     bool open(const QString &filepath);
-    bool setEvent(Unhv3Event *event);
+    void setEvent(IArkEvent *event);
 
     // < -- 상태 확인 -- >
     bool testArchive() const;
@@ -80,6 +81,7 @@ public:
     QDateTime createdTime() const;
 
 private:
+    QRegExp *extension;         ///< HDP 확장자 표현식
     Unhv3Event *event_;         ///< 이벤트 처리자.
     bool openStatus;            ///< 파일 열림 여부.
     QFile *file;                ///< 파일 객체

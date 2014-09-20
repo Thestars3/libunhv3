@@ -6,7 +6,7 @@ HdpImageIOPlugin::HdpImageIOPlugin(
         ) :
     QImageIOPlugin(parent)
 {
-    suportFormat << "hdp" << "HDP";
+    suportFormat << "hdp";
 }
 
 QImageIOPlugin::Capabilities HdpImageIOPlugin::capabilities(

@@ -38,7 +38,6 @@ public:
         NOT_YET_IMPELEMENTED, ///< 아직 구현되지 않은 기능입니다.
         SAVE_FILE_ERROR,      ///< 파일 쓰기 실패.
         IS_BROKEN_FILE,       ///< 손상된 파일
-        CHANGE_DIR_FAILE,     ///< 디렉토리 이동에 실패.
         TARGET_IS_DIR         ///< 저장 경로로 지정된 타겟이 디렉토리입니다.
     };
     explicit Unhv3Status(Status status);

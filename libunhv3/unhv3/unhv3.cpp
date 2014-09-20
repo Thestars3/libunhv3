@@ -1,4 +1,6 @@
 #include <QFile>
+#include <QDebug>
+#include <QRegExp>
 #include <QBuffer>
 #include <QFileInfo>
 #include <QDataStream>
@@ -24,20 +26,15 @@ bool Unhv3::isEncrypted() const
     return false;
 }
 
-/** 압축 해제중 발생하는 여러가지 이벤트를 받아서 처리하고 싶을 경우, 이벤트를 콜백으로 받을 객체를 지정합니다.
+/** 압축 해제중 발생하는 여러가지 이벤트를 받아서 처리하고 싶을 경우, 이벤트를 콜백으로 받을 객체를 지정합니다.\n
+  nullptr을 넘겨주면, 이벤트 처리가 중단됩니다.
   @return 성공여부.
   */
-bool Unhv3::setEvent(
-        Unhv3Event *event ///< 이벤트를 받을 객체의 포인터
+void Unhv3::setEvent(
+        IArkEvent *event ///< 이벤트를 받을 객체의 포인터
         )
 {
-    if ( event == nullptr ) {
-        return false;
-    }
-
-    event_ = event;
-
-    return true;
+    event_->setEvent(event);
 }
 
 /** 소멸자.
@@ -49,6 +46,8 @@ Unhv3::~Unhv3()
     delete HEAD_;
     delete BODY_;
     delete file;
+    delete event_;
+    delete extension;
 }
 
 /** 생성자.
@@ -66,8 +65,9 @@ Unhv3::Unhv3() :
     HV30_ = new BondChunkHeader("HV30");
     HEAD_ = new BondChunkHeader("HEAD");
     file = new QFile();
+    event_ = new Unhv3Event();
+    extension = new QRegExp("\\.hdp$", Qt::CaseInsensitive);
     fileStream_.setByteOrder(QDataStream::LittleEndian);
-    event_ = nullptr;
 }
 
 /** 마지막으로 발생한 오류의 상세 내용을 확인한다.
@@ -128,6 +128,7 @@ bool Unhv3::extractAllTo(
         ) const
 {
     QFileInfo pathInfo(savePath);
+    bool success = true;
 
     if ( ! pathInfo.exists() ) {
         status = Unhv3Status::SAVEPATH_NOT_EXIST;
@@ -139,18 +140,16 @@ bool Unhv3::extractAllTo(
         return false;
     }
 
-    if ( event_ != nullptr ) {
-        event_->setOpen();
-    }
+    event_->setOpen();
     int max = fileItemCount();
     for (int i = 0; i < max; i++) {
-        extractOneTo(i, savePath);
+        if ( ! extractOneTo(i, savePath) ) {
+            success = false;
+        }
     }
-    if ( event_ != nullptr ) {
-        event_->setComplete();
-    }
+    event_->setComplete();
 
-    return true;
+    return success;
 }
 
 /** 현재 열려있는 파일의 파일 크기를 리턴합니다.
@@ -316,15 +315,12 @@ bool Unhv3::extractOneTo(
         ) const
 {
     savePath += "/" + getFileItem(index)->NAME();
-    if ( ! extractOneAs(index, savePath) ) {
-        return false;
-    }
-
-    return true;
+    return extractOneAs(index, savePath);
 }
 
 /** 압축파일내의 한개의 파일만을 풀때 사용합니다. \n
-  Unhv3::extractOneTo와 달리 파일명을 지정할 수 있습니다.
+  Unhv3::extractOneTo와 달리 파일명을 지정할 수 있습니다.\n
+  저장될 파일경로에 포함된 저장파일명의 확장자는 원본 파일의 확장자에 따라 변할수 있습니다.
   @return true : 작업 성공; false : 작업 중 오류 있음.
   */
 bool Unhv3::extractOneAs(
@@ -333,21 +329,33 @@ bool Unhv3::extractOneAs(
         ) const
 {
     const FileInfo *fileItem = LIST_->getFileItem(index);
-    uint pos = fileItem->POS4();
     QByteArray raw_data;
 
-    if ( event_ != nullptr ) {
-        event_->setStartFile(filePathName);
-        event_->setProgress(0);
+    event_->setStartFile(filePathName);
+    event_->setProgress(0);
+
+    // < -- 저장 경로가 올바른지 검사 -- >
+    QFileInfo fileInfo(filePathName);
+    if ( fileInfo.exists() ) {
+        if ( fileInfo.isDir() ) {
+            status = Unhv3Status::TARGET_IS_DIR;
+            event_->setError(filePathName, status);
+        }
+        else {
+            filePathName = event_->convertDuplicatedName(filePathName);
+        }
     }
 
+    // < -- 데이터를 메모리에 로드 -- >
     try {
+        uint pos = fileItem->POS4();
         raw_data = BODY_->getFileData(pos)->raw_data(file);
     }
     catch (BondReadException&) {
         status = Unhv3Status::IS_BROKEN_FILE;
         return false;
     }
+    event_->setProgress(25);
 
     // < -- 복호화 -- >
     if ( ENCR_ != 0 ) {
@@ -356,91 +364,61 @@ bool Unhv3::extractOneAs(
             raw_data[i] = raw_data.at(i) ^ ( i % 256 );
         }
     }
+    event_->setProgress(50);
 
-    QFileInfo fileInfo(filePathName);
-    if ( fileInfo.exists() ) {
-        if ( fileInfo.isDir() ) {
-            status = Unhv3Status::TARGET_IS_DIR;
-            if ( event_ != nullptr ) {
-                event_->setError(filePathName, status);
-            }
-        }
-        else {
-            if ( event_ != nullptr ) {
-                filePathName = event_->convertDuplicatedName(filePathName);
-            }
-        }
-    }
-
-    if ( event_ != nullptr ) {
-        event_->setProgress(33);
-    }
+    // < -- CRC-32 -- >
     if ( ufp::computeCrc32(raw_data) != fileItem->CRC3() ) {
         status = Unhv3Status::CRC_ERROR;
-        if ( event_ != nullptr ) {
-            event_->setError(filePathName, status);
-        }
+        event_->setError(filePathName, status);
         return false;
     }
+    event_->setProgress(70);
 
-    if ( QFileInfo(fileItem->NAME()).suffix().compare("hdp", Qt::CaseInsensitive) == 0 ) {
+    // < -- 변환 및 저장 -- >
+    if ( fileItem->NAME().contains(*extension) ) {
+        // < -- 변환 후 저장 -- >
         QBuffer buffer(&raw_data);
-        QImage image = QImageReader(&buffer, "HDP").read();
-        if ( event_ != nullptr ) {
-            event_->setProgress(66);
-        }
+        QImage image = QImageReader(&buffer, "hdp").read();
 
-        bool b = true;
+        bool success;
         if ( image.hasAlphaChannel() ) {
-            b = image.save(filePathName, "PNG");
+            filePathName.replace(*extension, ".png");
+            success = image.save(filePathName, "png");
         }
         else {
-            b = image.save(filePathName, "JPEG", 100);
+            filePathName.replace(*extension, ".jpeg");
+            success = image.save(filePathName, "jpeg", 100);
         }
-        if ( event_ != nullptr ) {
-            event_->setProgress(99);
-        }
+        event_->setProgress(99);
 
-        if ( ! b ) {
+        if ( ! success ) {
             status = Unhv3Status::SAVE_FILE_ERROR;
-            if ( event_ != nullptr ) {
-                event_->setError(filePathName, status);
-            }
+            event_->setError(filePathName, status);
             return false;
         }
     }
     else {
+        // < -- 저장 -- >
         QFile file(filePathName);
 
-        if ( event_ != nullptr ) {
-            event_->setProgress(50);
-        }
         if ( ! file.open(QFile::WriteOnly) ) {
             status = Unhv3Status::SAVE_FILE_ERROR;
-            if ( event_ != nullptr ) {
-                event_->setError(filePathName, status);
-            }
+            event_->setError(filePathName, status);
             return false;
         }
 
         if ( file.write(raw_data) == -1 ) {
             status = Unhv3Status::SAVE_FILE_ERROR;
-            if ( event_ != nullptr ) {
-                event_->setError(filePathName, status);
-            }
+            event_->setError(filePathName, status);
             file.close();
             return false;
         }
-        if ( event_ != nullptr ) {
-            event_->setProgress(99);
-        }
+        event_->setProgress(99);
 
         file.close();
     }
 
-    if ( event_ != nullptr ) {
-        event_->setProgress(100);
-    }
+    event_->setProgress(100);
     return true;
 }
 
@@ -569,6 +547,7 @@ bool Unhv3::open(
         }
     }
 
+    // < -- LIST, BODY -- >
     try {
         fileStream_ >> *LIST_ >> *BODY_;
     }

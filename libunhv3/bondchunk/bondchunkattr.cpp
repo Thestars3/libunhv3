@@ -76,7 +76,7 @@ QString BondChunkAttr::convertFromString() const
         return QString::null;
     }
 
-    return textCodec->toUnicode(attrData_).replace(QRegExp("\\0+$"), "");
+    return textCodec->toUnicode(attrData_).remove(QRegExp("\\0+$"));
 }
 
 /** hv3 포멧의 FILETIME 타입을 QDateTime 타입으로 바꾸어 저장합니다.
