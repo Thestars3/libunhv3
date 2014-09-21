@@ -1,10 +1,8 @@
 #include <QFile>
-#include <QDebug>
+#include <QImage>
 #include <QRegExp>
-#include <QBuffer>
 #include <QFileInfo>
 #include <QDataStream>
-#include <QImageReader>
 #include "bondreadexception.hpp"
 #include "bondchunkheader.hpp"
 #include "filedatastorage.hpp"
@@ -320,7 +318,8 @@ bool Unhv3::extractOneTo(
 
 /** 압축파일내의 한개의 파일만을 풀때 사용합니다. \n
   Unhv3::extractOneTo와 달리 파일명을 지정할 수 있습니다.\n
-  저장될 파일경로에 포함된 저장파일명의 확장자는 원본 파일의 확장자에 따라 변할수 있습니다.
+  저장될 파일경로에 포함된 저장파일명의 확장자는 원본 파일의 확장자에 따라 변할수 있습니다.\n
+  중복 처리 이벤트가 설정되지 않았다면, 중복되는 경로에 있는 파일은 덮어 씌워지게 됩니다.
   @return true : 작업 성공; false : 작업 중 오류 있음.
   */
 bool Unhv3::extractOneAs(
@@ -333,18 +332,6 @@ bool Unhv3::extractOneAs(
 
     event_->setStartFile(filePathName);
     event_->setProgress(0);
-
-    // < -- 저장 경로가 올바른지 검사 -- >
-    QFileInfo fileInfo(filePathName);
-    if ( fileInfo.exists() ) {
-        if ( fileInfo.isDir() ) {
-            status = Unhv3Status::TARGET_IS_DIR;
-            event_->setError(filePathName, status);
-        }
-        else {
-            filePathName = event_->convertDuplicatedName(filePathName);
-        }
-    }
 
     // < -- 데이터를 메모리에 로드 -- >
     try {
@@ -375,47 +362,61 @@ bool Unhv3::extractOneAs(
     event_->setProgress(70);
 
     // < -- 변환 및 저장 -- >
-    if ( fileItem->NAME().contains(*extension) ) {
+    {
+        bool thisFileIsHv3 = fileItem->NAME().contains(*extension);
+        bool hv3ConvertSuccess = false;
+
         // < -- 변환 후 저장 -- >
-        QBuffer buffer(&raw_data);
-        QImage image = QImageReader(&buffer, "hdp").read();
+        if ( thisFileIsHv3 ) {
+            QImage image = QImage::fromData(raw_data, "hdp");
+            QString convertedPath = filePathName;
+            bool imageHasAlphaChannel = image.hasAlphaChannel();
 
-        bool success;
-        if ( image.hasAlphaChannel() ) {
-            filePathName.replace(*extension, ".png");
-            success = image.save(filePathName, "png");
-        }
-        else {
-            filePathName.replace(*extension, ".jpeg");
-            success = image.save(filePathName, "jpeg", 100);
-        }
-        event_->setProgress(99);
+            if ( imageHasAlphaChannel ) {
+                convertedPath.replace(*extension, ".png");
+            }
+            else {
+                convertedPath.replace(*extension, ".jpg");
+            }
 
-        if ( ! success ) {
-            status = Unhv3Status::SAVE_FILE_ERROR;
-            event_->setError(filePathName, status);
-            return false;
+            if ( event_ != nullptr && QFile::exists(convertedPath) ) {
+                convertedPath = event_->convertDuplicatedName(convertedPath);
+            }
+
+            if ( imageHasAlphaChannel ) {
+                hv3ConvertSuccess = image.save(convertedPath, "png");
+            }
+            else {
+                hv3ConvertSuccess = image.save(convertedPath, "jpg", 100);
+            }
+
+            event_->setProgress(99);
         }
-    }
-    else {
+
         // < -- 저장 -- >
-        QFile file(filePathName);
+        if ( ! thisFileIsHv3 || ! hv3ConvertSuccess ) {
+            if ( event_ != nullptr && QFile::exists(filePathName) ) {
+                filePathName = event_->convertDuplicatedName(filePathName);
+            }
 
-        if ( ! file.open(QFile::WriteOnly) ) {
-            status = Unhv3Status::SAVE_FILE_ERROR;
-            event_->setError(filePathName, status);
-            return false;
-        }
+            QFile file(filePathName);
 
-        if ( file.write(raw_data) == -1 ) {
-            status = Unhv3Status::SAVE_FILE_ERROR;
-            event_->setError(filePathName, status);
+            if ( ! file.open(QFile::WriteOnly) ) {
+                status = Unhv3Status::SAVE_FILE_ERROR;
+                event_->setError(filePathName, status);
+                return false;
+            }
+
+            if ( file.write(raw_data) == -1 ) {
+                status = Unhv3Status::SAVE_FILE_ERROR;
+                event_->setError(filePathName, status);
+                file.close();
+                return false;
+            }
+            event_->setProgress(99);
+
             file.close();
-            return false;
         }
-        event_->setProgress(99);
-
-        file.close();
     }
 
     event_->setProgress(100);

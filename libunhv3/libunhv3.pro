@@ -6,8 +6,6 @@
 
 include( ../common.pri )
 
-include( $$ROOT_PATH/hdp_image_plugin/hdp_image_plugin_include.pri )
-
 include( bondchunk/bondchunk.pri )
 
 include( unhv3/unhv3.pri )

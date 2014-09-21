@@ -40,6 +40,8 @@ bool HdpImageIOHandler::read(
 {
     ERR err = WMP_errSuccess;
 
+    size_t bufferSize;
+    U8 *buffer;
     PKImageDecode *pDecoder = nullptr;
     PKFactory *pFactory = nullptr;
     PKCodecFactory *pCodecFactory = nullptr;
@@ -80,7 +82,7 @@ bool HdpImageIOHandler::read(
         guidPixFormat = GUID_PKPixelFormat32bppRGBA;
     }
     else {
-        guidPixFormat = GUID_PKPixelFormat32bppRGB;
+        guidPixFormat = GUID_PKPixelFormat24bppRGB;
     }
 
     // < -- 컨버터 초기화 -- >
@@ -88,9 +90,11 @@ bool HdpImageIOHandler::read(
     Call(pConverter->Initialize(pConverter, pDecoder, nullptr, guidPixFormat)); // 널 포인터를 인자로 주어 확장자에 따른 픽셀 포멧 지정을 막음.
 
     // < -- 인코더 준비 -- >
-    Call(pFactory->CreateStreamFromMemory(&pEncodeStream, nullptr, 0)); //의미 없음. 함수 포인터에 저절한 더미 함수를 배치 하기 위한 작업.
+    bufferSize = pDecoder->WMP.wmiI.cWidth * pDecoder->WMP.wmiI.cHeight * ( pDecoder->WMP.bHasAlpha ? 4 : 3 );
+    buffer = new U8[bufferSize];
+    Call(pFactory->CreateStreamFromMemory(&pEncodeStream, buffer, bufferSize));
     Call(PKImageEncode_Create(&pEncoder));
-    //pEncoder->WritePixels = PKImageEncode_WritePixels_QImage;
+    pEncoder->WritePixels = PKImageEncode_WritePixels_Raw;
     pEncoder->Initialize(pEncoder, pEncodeStream, nullptr, 0);
 
     // < -- 출력 화소 포멧 설정 -- >
@@ -110,9 +114,9 @@ bool HdpImageIOHandler::read(
     }
 
     // < -- 변환된 내용을 기록 -- >
-    //pEncoder->WriteSource = PKImageEncode_Transcode;
-    //Call(pEncoder->WriteSource(pEncoder, pConverter, &rect));
-    PKImageEncode_Transcode(pEncoder, pConverter, &rect, outImage);
+    pEncoder->WriteSource = PKImageEncode_Transcode;
+    Call(pEncoder->WriteSource(pEncoder, pConverter, &rect));
+    writeImage(pEncoder, outImage);
 
     // < -- 인코더 할당 해제 -- >
     pEncoder->Release(&pEncoder);
@@ -126,6 +130,31 @@ Cleanup:
     }
 
     return true;
+}
+
+void HdpImageIOHandler::writeImage(
+        PKImageEncode *pEncoder,
+        QImage *outImage
+        )
+{
+    QImage::Format format;
+    size_t size = pEncoder->pStream->state.buf.cbBufCount;
+    QByteArray buffer(reinterpret_cast<char*>(pEncoder->pStream->state.buf.pbBuf), size);
+
+    if ( pEncoder->WMP.bHasAlpha ) {
+        format = QImage::Format_ARGB32;
+        convertRgbaToArgb(buffer.data(), size);
+    }
+    else {
+        format = QImage::Format_RGB888;
+    }
+
+    *outImage = QImage(pEncoder->uWidth, pEncoder->uHeight, format);
+    qstrncpy(reinterpret_cast<char*>(outImage->bits()), buffer.data(), size);
+
+    //JXR 라이브러리에서 사용하는 해상도 단위는 인치. QT에서 쓰는건 미터단위. (문제 있어서 주석 처리함.)
+    outImage->setDotsPerMeterX(inchConvertToMeter(pEncoder->fResX));
+    outImage->setDotsPerMeterY(inchConvertToMeter(pEncoder->fResY));
 }
 
 ERR HdpImageIOHandler::PKCodecFactory_CreateDecoderFromMemory(
@@ -160,73 +189,15 @@ Cleanup:
     return err;
 }
 
-ERR HdpImageIOHandler::WriteQImageHeader(
-        PKImageEncode *pIE, ///< PKImageEncode
-        QImage *image ///< 이미지 객체 포인터
-        )
-{
-    //JXR 라이브러리에서 사용하는 해상도 단위는 인치. QT에서 쓰는건 미터단위.
-    image->setDotsPerMeterX(inchConvertToMeter(pIE->fResX));
-    image->setDotsPerMeterY(inchConvertToMeter(pIE->fResY));
-
-    //헤더 기록 완료
-    pIE->fHeaderDone = !FALSE;
-
-    return WMP_errSuccess;
-}
-
-ERR HdpImageIOHandler::PKImageEncode_WritePixels_QImage(
-        PKImageEncode *pIE, ///< PKImageEncode
-        U32 cLine,
-        U8 *pbPixel, ///< 픽셀 데이터
-        U32 cbStride,
-        QImage *outImage ///< 출력 이미지 객체 포인터
-        )
-{
-    ERR err = WMP_errSuccess;
-
-    QImage::Format format;
-    size_t cbLineM = 0;
-    int size;
-
-    // calculate line size in memory and in stream
-    cbLineM = pIE->cbPixel * pIE->uWidth;
-
-    FailIf(cbStride < cbLineM, WMP_errInvalidParameter);
-
-    if ( pIE->WMP.bHasAlpha ) {
-        size = pIE->uWidth * pIE->uHeight * 4;
-        format = QImage::Format_ARGB32_Premultiplied;
-        convertRgbaToArgb(pbPixel, size);
-    }
-    else {
-        size = pIE->uWidth * pIE->uHeight * 3;
-        format = QImage::Format_RGB888;
-    }
-
-    *outImage = QImage(pIE->uWidth, pIE->uHeight, format);
-    qstrncpy(reinterpret_cast<char*>(outImage->bits()), reinterpret_cast<char*>(pbPixel), size);
-    pIE->idxCurrentLine += cLine;
-
-    // < -- header -- >
-    if ( ! pIE->fHeaderDone ) {
-        WriteQImageHeader(pIE, outImage);
-    }
-
-Cleanup:
-    return err;
-}
-
 /** RGBA 순서로된 바이트 배열을 ARGB 순서로 재배열한다.
-  @warning 사용시 원본의 값이 변경됩니다.
   */
 void HdpImageIOHandler::convertRgbaToArgb(
-        uchar *data,   ///< 재배열 할 데이터
+        char *data,   ///< 재배열 할 데이터
         uint size      ///< 바이트 수
         )
 {
     quint8 r, g, b, a;
-    uchar *p = data;
+    uchar *p = reinterpret_cast<uchar*>(data);
     uint i = 0;
     while( i < size ) {
         r = p[0];
@@ -243,74 +214,74 @@ void HdpImageIOHandler::convertRgbaToArgb(
     }
 }
 
-ERR HdpImageIOHandler::PKImageEncode_Transcode(
+ERR PKImageEncode_WritePixels_Raw(
         PKImageEncode *pIE, ///< PKImageEncode
-        PKFormatConverter *pFC, ///< PKFormatConverter
-        PKRect *pRect, ///< PKRect
-        QImage *outImage ///< 출력 이미지 객체 포인터
+        U32 cLine,
+        U8 *pbPixel,        ///< 픽셀 데이터
+        U32 cbStride
         )
 {
     ERR err = WMP_errSuccess;
 
-    PKPixelFormatGUID enPFFrom = GUID_PKPixelFormatDontCare;
-    PKPixelFormatGUID enPFTo = GUID_PKPixelFormatDontCare;
+    struct WMPStream* pS = pIE->pStream;
+    size_t cbLineM = 0;
+    size_t size;
 
-    PKPixelInfo pPIFrom;
-    PKPixelInfo pPITo;
+    pIE->fHeaderDone = !FALSE;
 
-    U32 cbStrideTo = 0;
-    U32 cbStrideFrom = 0;
-    U32 cbStride = 0;
+    // calculate line size in memory and in stream
+    cbLineM = pIE->cbPixel * pIE->uWidth;
 
-    U8* pb = nullptr;
+    FailIf(cbStride < cbLineM, WMP_errInvalidParameter);
 
-    CWMTranscodingParam cParam = {0};
-
-    // get pixel format
-    Call(pFC->GetSourcePixelFormat(pFC, &enPFFrom));
-    Call(pFC->GetPixelFormat(pFC, &enPFTo));
-
-    // calc common stride
-    pPIFrom.pGUIDPixFmt = &enPFFrom;
-    PixelFormatLookup(&pPIFrom, LOOKUP_FORWARD);
-
-    pPITo.pGUIDPixFmt = &enPFTo;
-    PixelFormatLookup(&pPITo, LOOKUP_FORWARD);
-
-    cbStrideFrom = (BD_1 == pPIFrom.bdBitDepth ? ((pPIFrom.cbitUnit * pRect->Width + 7) >> 3) : (((pPIFrom.cbitUnit + 7) >> 3) * pRect->Width));
-    if (&GUID_PKPixelFormat12bppYUV420 == pPIFrom.pGUIDPixFmt || &GUID_PKPixelFormat16bppYUV422 == pPIFrom.pGUIDPixFmt) {
-        cbStrideFrom >>= 1;
-    }
-
-    cbStrideTo = (BD_1 == pPITo.bdBitDepth ? ((pPITo.cbitUnit * pIE->uWidth + 7) >> 3) : (((pPITo.cbitUnit + 7) >> 3) * pIE->uWidth));
-    if (&GUID_PKPixelFormat12bppYUV420 == pPITo.pGUIDPixFmt || &GUID_PKPixelFormat16bppYUV422 == pPITo.pGUIDPixFmt) {
-        cbStrideTo >>= 1;
-    }
-
-    cbStride = qMax(cbStrideFrom, cbStrideTo);
-
-    if(pIE->bWMP){
-        cParam.cLeftX = pFC->pDecoder->WMP.wmiI.cROILeftX;
-        cParam.cTopY = pFC->pDecoder->WMP.wmiI.cROITopY;
-        cParam.cWidth = pFC->pDecoder->WMP.wmiI.cROIWidth;
-        cParam.cHeight = pFC->pDecoder->WMP.wmiI.cROIHeight;
-        cParam.oOrientation = pFC->pDecoder->WMP.wmiI.oOrientation;
-        cParam.uAlphaMode = pFC->pDecoder->WMP.wmiSCP.uAlphaMode;
-        cParam.bfBitstreamFormat = pFC->pDecoder->WMP.wmiSCP.bfBitstreamFormat;
-        cParam.sbSubband = pFC->pDecoder->WMP.wmiSCP.sbSubband;
-        cParam.bIgnoreOverlap = pFC->pDecoder->WMP.bIgnoreOverlap;
-
-        Call(pIE->Transcode(pIE, pFC->pDecoder, &cParam));
+    if ( pIE->WMP.bHasAlpha ) {
+        size = pIE->uWidth * pIE->uHeight * 4;
     }
     else {
-        // actual dec/enc with local buffer
-        Call(PKAllocAligned((void **) &pb, cbStride * pRect->Height, 128));
-        Call(pFC->Copy(pFC, pRect, pb, cbStride));
-        //Call(pIE->WritePixels(pIE, pRect->Height, pb, cbStride));
-        Call(PKImageEncode_WritePixels_QImage(pIE, pRect->Height, pb, cbStride, outImage));
+        size = pIE->uWidth * pIE->uHeight * 3;
     }
 
+    pS->Write(pS, pbPixel, size);
+
+    pIE->idxCurrentLine += cLine;
+
 Cleanup:
-    PKFreeAligned(reinterpret_cast<void**>(&pb));
     return err;
 }
+
+//ERR PKImageEncode_WritePixels_Raw(
+//    PKImageEncode* pIE,
+//    U32 cLine,
+//    U8* pbPixel,
+//    U32 cbStride)
+//{
+//    ERR err = WMP_errSuccess;
+
+//    struct WMPStream* pS = pIE->pStream;
+//    size_t cbLineM = 0, cbLineS = 0;
+//    I32 i = 0;
+//    static U8 pPadding[4] = {0};
+
+//    // header
+//    pIE->fHeaderDone = !FALSE;
+
+//    // body
+//    // calculate line size in memory and in stream
+//    cbLineM = pIE->cbPixel * pIE->uWidth;
+//    cbLineS = (cbLineM + 3) / 4 * 4;
+
+//    FailIf(cbStride < cbLineM, WMP_errInvalidParameter);
+
+//    for (i = cLine - 1; 0 <= i; --i) {
+//        size_t offM = cbStride * i;
+//        size_t offS = cbLineS * (pIE->uHeight - (pIE->idxCurrentLine + i + 1));
+
+//        Call(pS->SetPos(pS, pIE->offPixel + offS));
+//        Call(pS->Write(pS, pbPixel + offM, cbLineM));
+//    }
+//    Call(pS->Write(pS, pPadding, (cbLineS - cbLineM)));
+//    pIE->idxCurrentLine += cLine;
+
+//Cleanup:
+//    return err;
+//}

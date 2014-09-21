@@ -35,11 +35,9 @@ public:
     virtual bool read(QImage *outImage);
 
 private:
-    ERR PKImageEncode_Transcode(PKImageEncode *pIE, PKFormatConverter *pFC, PKRect *pRect, QImage *outImage);
-    ERR PKImageEncode_WritePixels_QImage(PKImageEncode *pIE, U32 cLine, U8 *pbPixel, U32 cbStride, QImage *outImage);
     ERR PKCodecFactory_CreateDecoderFromMemory(PKImageDecode **ppDecoder);
-    ERR WriteQImageHeader(PKImageEncode *pIE, QImage *image);
-    void convertRgbaToArgb(uchar *data, uint size);
+    void convertRgbaToArgb(char *data, uint size);
+    void writeImage(PKImageEncode *pEncoder, QImage *outImage);
 
     /** inch 단위를 미터 단위로 바꿉니다.
       @return 미터 단위로된 값
@@ -53,5 +51,7 @@ private:
     }
 
 };
+
+ERR PKImageEncode_WritePixels_Raw(PKImageEncode *pIE, U32 cLine, U8 *pbPixel, U32 cbStride);
 
 #endif // HDPIMAGEIOHANDLER_HPP

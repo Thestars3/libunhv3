@@ -7,10 +7,10 @@ HEADERS  += \
     $$PWD/unhv3event.hpp \
     $$PWD/unhv3status.hpp \ 
 	$$PWD/EventInterface.hpp \
-    unhv3/arkerrconverter.hpp
+	$$PWD/arkerrconverter.hpp
 
 SOURCES  += \
     $$PWD/unhv3.cpp \
     $$PWD/unhv3event.cpp \
     $$PWD/unhv3status.cpp \ 
-    unhv3/arkerrconverter.cpp
+	$$PWD/arkerrconverter.cpp
