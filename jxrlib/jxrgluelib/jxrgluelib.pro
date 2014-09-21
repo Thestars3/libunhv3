@@ -1,14 +1,10 @@
 #-------------------------------------------------
 #
-# libjxrglue 프로젝트
+# jxrgluelib 프로젝트
 #
 #-------------------------------------------------
 
-include( common.pri )
-
-include( jxrgluelib/jxrgluelib.pri )
-
-include( jxrtestlib/jxrtestlib.pri )
+include( ../common.pri )
 
 TEMPLATE = lib
 
@@ -17,3 +13,13 @@ TARGET   = jxrglue
 QT       -= gui
 
 CONFIG   += staticlib
+
+HEADERS  += \
+	JXRGlue.h \
+	JXRMeta.h
+
+SOURCES  += \
+	JXRGlue.c \
+	JXRGlueJxr.c \
+	JXRGluePFC.c \
+	JXRMeta.c

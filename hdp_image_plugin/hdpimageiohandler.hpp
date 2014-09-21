@@ -36,7 +36,7 @@ public:
 
 private:
     ERR PKCodecFactory_CreateDecoderFromMemory(PKImageDecode **ppDecoder);
-    void convertRgbaToArgb(char *data, uint size);
+    void convertRgbaToArgb(QByteArray &data);
     void writeImage(PKImageEncode *pEncoder, QImage *outImage);
 
     /** inch 단위를 미터 단위로 바꿉니다.
@@ -52,6 +52,6 @@ private:
 
 };
 
-ERR PKImageEncode_WritePixels_Raw(PKImageEncode *pIE, U32 cLine, U8 *pbPixel, U32 cbStride);
+ERR PKImageEncode_WritePixels_RAW(PKImageEncode *pIE, U32 cLine, U8 *pbPixel, U32 cbStride);
 
 #endif // HDPIMAGEIOHANDLER_HPP

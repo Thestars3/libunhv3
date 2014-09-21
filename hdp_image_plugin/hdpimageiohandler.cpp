@@ -1,5 +1,5 @@
 #include <QImage>
-#include <JXRTest.h>
+#include <JXRGlue.h>
 #include "hdpimageiohandler.hpp"
 
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
@@ -94,7 +94,7 @@ bool HdpImageIOHandler::read(
     buffer = new U8[bufferSize];
     Call(pFactory->CreateStreamFromMemory(&pEncodeStream, buffer, bufferSize));
     Call(PKImageEncode_Create(&pEncoder));
-    pEncoder->WritePixels = PKImageEncode_WritePixels_Raw;
+    pEncoder->WritePixels = PKImageEncode_WritePixels_RAW;
     pEncoder->Initialize(pEncoder, pEncodeStream, nullptr, 0);
 
     // < -- 출력 화소 포멧 설정 -- >
@@ -143,7 +143,7 @@ void HdpImageIOHandler::writeImage(
 
     if ( pEncoder->WMP.bHasAlpha ) {
         format = QImage::Format_ARGB32;
-        convertRgbaToArgb(buffer.data(), size);
+        convertRgbaToArgb(buffer);
     }
     else {
         format = QImage::Format_RGB888;
@@ -153,8 +153,8 @@ void HdpImageIOHandler::writeImage(
     qstrncpy(reinterpret_cast<char*>(outImage->bits()), buffer.data(), size);
 
     //JXR 라이브러리에서 사용하는 해상도 단위는 인치. QT에서 쓰는건 미터단위. (문제 있어서 주석 처리함.)
-    outImage->setDotsPerMeterX(inchConvertToMeter(pEncoder->fResX));
-    outImage->setDotsPerMeterY(inchConvertToMeter(pEncoder->fResY));
+//    outImage->setDotsPerMeterX(inchConvertToMeter(pEncoder->fResX));
+//    outImage->setDotsPerMeterY(inchConvertToMeter(pEncoder->fResY));
 }
 
 ERR HdpImageIOHandler::PKCodecFactory_CreateDecoderFromMemory(
@@ -192,13 +192,13 @@ Cleanup:
 /** RGBA 순서로된 바이트 배열을 ARGB 순서로 재배열한다.
   */
 void HdpImageIOHandler::convertRgbaToArgb(
-        char *data,   ///< 재배열 할 데이터
-        uint size      ///< 바이트 수
+        QByteArray &data   ///< 재배열 할 데이터
         )
 {
     quint8 r, g, b, a;
-    uchar *p = reinterpret_cast<uchar*>(data);
-    uint i = 0;
+    uchar *p = reinterpret_cast<uchar*>(data.data());
+    int size = data.size();
+    int i = 0;
     while( i < size ) {
         r = p[0];
         g = p[1];
@@ -214,7 +214,7 @@ void HdpImageIOHandler::convertRgbaToArgb(
     }
 }
 
-ERR PKImageEncode_WritePixels_Raw(
+ERR PKImageEncode_WritePixels_RAW(
         PKImageEncode *pIE, ///< PKImageEncode
         U32 cLine,
         U8 *pbPixel,        ///< 픽셀 데이터
@@ -248,40 +248,3 @@ ERR PKImageEncode_WritePixels_Raw(
 Cleanup:
     return err;
 }
-
-//ERR PKImageEncode_WritePixels_Raw(
-//    PKImageEncode* pIE,
-//    U32 cLine,
-//    U8* pbPixel,
-//    U32 cbStride)
-//{
-//    ERR err = WMP_errSuccess;
-
-//    struct WMPStream* pS = pIE->pStream;
-//    size_t cbLineM = 0, cbLineS = 0;
-//    I32 i = 0;
-//    static U8 pPadding[4] = {0};
-
-//    // header
-//    pIE->fHeaderDone = !FALSE;
-
-//    // body
-//    // calculate line size in memory and in stream
-//    cbLineM = pIE->cbPixel * pIE->uWidth;
-//    cbLineS = (cbLineM + 3) / 4 * 4;
-
-//    FailIf(cbStride < cbLineM, WMP_errInvalidParameter);
-
-//    for (i = cLine - 1; 0 <= i; --i) {
-//        size_t offM = cbStride * i;
-//        size_t offS = cbLineS * (pIE->uHeight - (pIE->idxCurrentLine + i + 1));
-
-//        Call(pS->SetPos(pS, pIE->offPixel + offS));
-//        Call(pS->Write(pS, pbPixel + offM, cbLineM));
-//    }
-//    Call(pS->Write(pS, pPadding, (cbLineS - cbLineM)));
-//    pIE->idxCurrentLine += cLine;
-
-//Cleanup:
-//    return err;
-//}

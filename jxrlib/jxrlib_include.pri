@@ -6,15 +6,14 @@
 
 INCLUDEPATH += \
 	$${PWD}/jxrgluelib \
-	$${PWD}/jxrtestlib \
 	$${PWD}/image/sys \
 	$${PWD}/common/include
 
-DEFINES += \
+DEFINES     += \
 	__ANSI__ \
 	DISABLE_PERF_MEASUREMENT
 
-LIBS    += \
+LIBS        += \
 	-lm \
-	-L'$${PWD}/$$DESTDIR' -ljxrglue \
+	-L'$${PWD}/jxrgluelib/$$DESTDIR' -ljxrglue \
 	-L'$${PWD}/image/$$DESTDIR' -ljpegxr
