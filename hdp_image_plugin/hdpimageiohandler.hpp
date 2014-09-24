@@ -16,16 +16,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 #ifndef HDPIMAGEIOHANDLER_HPP
 #define HDPIMAGEIOHANDLER_HPP
 
-#include <QByteArray>
 #include <QImageIOHandler>
 
-typedef struct tagPKImageEncode PKImageEncode;
-typedef struct tagPKImageDecode PKImageDecode;
-typedef struct tagPKFormatConverter PKFormatConverter;
-typedef struct tagPKRect PKRect;
-typedef uint U32;
-typedef uchar U8;
 typedef long ERR;
+typedef struct tagPKImageDecode PKImageDecode;
+typedef struct tagPKImageEncode PKImageEncode;
 
 class HdpImageIOHandler :
         public QImageIOHandler
@@ -36,22 +31,17 @@ public:
 
 private:
     ERR PKCodecFactory_CreateDecoderFromMemory(PKImageDecode **ppDecoder);
-    void convertRgbaToArgb(QByteArray &data);
     void writeImage(PKImageEncode *pEncoder, QImage *outImage);
+    void convertRgbaToArgb(uchar *p, uint size);
 
-    /** inch 단위를 미터 단위로 바꿉니다.
-      @return 미터 단위로된 값
-      */
     template<typename T> static inline T inchConvertToMeter(
             const T &inch ///< 인치 단위
             )
     {
-         // inch * 5000 / 127 = meter
+        // inch * 5000 / 127 = meter
         return inch * ( 100 / 2.54 );
     }
 
 };
-
-ERR PKImageEncode_WritePixels_RAW(PKImageEncode *pIE, U32 cLine, U8 *pbPixel, U32 cbStride);
 
 #endif // HDPIMAGEIOHANDLER_HPP

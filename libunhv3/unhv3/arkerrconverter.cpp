@@ -40,6 +40,9 @@ ARKERR ArkerrConverter::ConvertUnhv3Status(
 
     case Unhv3Status::TARGET_IS_DIR:
         return ARKERR_CANT_OPEN_DEST_FILE;
+
+    case Unhv3Status::NOT_SUPORTED_DECRIPT_METHODE:
+        return ARKERR_ENCRYPTED_BOND_FILE;
     }
 
     return ARKERR_NOERR;

@@ -316,6 +316,30 @@ bool Unhv3::extractOneTo(
     return extractOneAs(index, savePath);
 }
 
+/** 암호화된 데이터를 복호화합니다.
+  @return 성공여부. 만약, 지원하지 않은 복호화 종류라면 false를 반환합니다.
+  */
+bool Unhv3::decrypt(
+        const QString &filePathName, ///< 파일 경로
+        QByteArray &encryptedData    ///< 암호화된 데이터
+        ) const
+{
+    switch(ENCR_) {
+    case 2:
+        for (int i = 0, size = encryptedData.size(); i < size; i++) {
+            encryptedData[i] = encryptedData.at(i) ^ ( i % 256 );
+        }
+        break;
+
+    default:
+        status = Unhv3Status::NOT_SUPORTED_DECRIPT_METHODE;
+        event_->setError(filePathName, status);
+        return false;
+    }
+
+    return true;
+}
+
 /** 압축파일내의 한개의 파일만을 풀때 사용합니다. \n
   Unhv3::extractOneTo와 달리 파일명을 지정할 수 있습니다.\n
   저장될 파일경로에 포함된 저장파일명의 확장자는 원본 파일의 확장자에 따라 변할수 있습니다.\n
@@ -345,11 +369,8 @@ bool Unhv3::extractOneAs(
     event_->setProgress(25);
 
     // < -- 복호화 -- >
-    if ( ENCR_ != 0 ) {
-        int size = raw_data.size();
-        for (int i = 0; i < size; i++) {
-            raw_data[i] = raw_data.at(i) ^ ( i % 256 );
-        }
+    if ( ! decrypt(filePathName, raw_data) ) {
+        return false;
     }
     event_->setProgress(50);
 

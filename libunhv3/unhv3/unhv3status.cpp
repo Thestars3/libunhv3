@@ -57,6 +57,9 @@ QString Unhv3Status::message() const
 
     case TARGET_IS_DIR:
         return trUtf8("저장 경로로 지정된 타겟이 디렉토리입니다.");
+
+    case NOT_SUPORTED_DECRIPT_METHODE:
+        return trUtf8("지원하지 않은 복호화 방법이 필요로한 암호화된 파일입니다.");
     }
 
     return trUtf8("알 수 없는 상태 코드입니다.");

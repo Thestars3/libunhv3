@@ -1,8 +1,11 @@
 #include <QImage>
+#include <cstring>
 #include <JXRGlue.h>
 #include "hdpimageiohandler.hpp"
 
 #pragma GCC diagnostic ignored "-Wmissing-field-initializers"
+
+static ERR PKImageEncode_WritePixels_RAW(PKImageEncode *pIE, U32 cLine, U8 *pbPixel, U32 cbStride);
 
 bool HdpImageIOHandler::canRead() const
 {
@@ -40,8 +43,6 @@ bool HdpImageIOHandler::read(
 {
     ERR err = WMP_errSuccess;
 
-    size_t bufferSize;
-    U8 *buffer;
     PKImageDecode *pDecoder = nullptr;
     PKFactory *pFactory = nullptr;
     PKCodecFactory *pCodecFactory = nullptr;
@@ -49,6 +50,8 @@ bool HdpImageIOHandler::read(
     PKImageEncode *pEncoder = nullptr; // 인코더
     PKFormatConverter *pConverter = nullptr; // 컨버터
     PKPixelFormatGUID guidPixFormat;
+    size_t bufferSize;
+    U8 *buffer;
     PKRect rect = {0, 0, 0, 0}; // 크기
 
     Call(PKCreateFactory(&pFactory, PK_SDK_VERSION));
@@ -80,9 +83,11 @@ bool HdpImageIOHandler::read(
     // < -- 알파값 유무에 따른 포멧 선택 -- >
     if ( pDecoder->WMP.bHasAlpha ) {
         guidPixFormat = GUID_PKPixelFormat32bppRGBA;
+        bufferSize = pDecoder->uWidth * pDecoder->uHeight * 4;
     }
     else {
         guidPixFormat = GUID_PKPixelFormat24bppRGB;
+        bufferSize = ( pDecoder->uWidth * 3 + pDecoder->uWidth * 3 % 4 ) * pDecoder->uHeight;
     }
 
     // < -- 컨버터 초기화 -- >
@@ -90,8 +95,7 @@ bool HdpImageIOHandler::read(
     Call(pConverter->Initialize(pConverter, pDecoder, nullptr, guidPixFormat)); // 널 포인터를 인자로 주어 확장자에 따른 픽셀 포멧 지정을 막음.
 
     // < -- 인코더 준비 -- >
-    bufferSize = pDecoder->WMP.wmiI.cWidth * pDecoder->WMP.wmiI.cHeight * ( pDecoder->WMP.bHasAlpha ? 4 : 3 );
-    buffer = new U8[bufferSize];
+    buffer = reinterpret_cast<U8*>(malloc( bufferSize * sizeof(U8) ));
     Call(pFactory->CreateStreamFromMemory(&pEncodeStream, buffer, bufferSize));
     Call(PKImageEncode_Create(&pEncoder));
     pEncoder->WritePixels = PKImageEncode_WritePixels_RAW;
@@ -138,23 +142,40 @@ void HdpImageIOHandler::writeImage(
         )
 {
     QImage::Format format;
-    size_t size = pEncoder->pStream->state.buf.cbBufCount;
-    QByteArray buffer(reinterpret_cast<char*>(pEncoder->pStream->state.buf.pbBuf), size);
+    size_t bufferSize = pEncoder->pStream->state.buf.cbBuf;
+    uchar *buffer = pEncoder->pStream->state.buf.pbBuf;
+    uint line;
 
+    // < --  알파값 유무에 따른 설정 -- >
     if ( pEncoder->WMP.bHasAlpha ) {
         format = QImage::Format_ARGB32;
-        convertRgbaToArgb(buffer);
+        convertRgbaToArgb(buffer, bufferSize);
+        line = pEncoder->uWidth * 4;
     }
     else {
         format = QImage::Format_RGB888;
+        line = pEncoder->uWidth * 3;
     }
 
+    // < -- 이미지 초기화 -- >
     *outImage = QImage(pEncoder->uWidth, pEncoder->uHeight, format);
-    qstrncpy(reinterpret_cast<char*>(outImage->bits()), buffer.data(), size);
 
-    //JXR 라이브러리에서 사용하는 해상도 단위는 인치. QT에서 쓰는건 미터단위. (문제 있어서 주석 처리함.)
-//    outImage->setDotsPerMeterX(inchConvertToMeter(pEncoder->fResX));
-//    outImage->setDotsPerMeterY(inchConvertToMeter(pEncoder->fResY));
+    // < -- 해상도 설정 -- >
+    //JXR 라이브러리에서 사용하는 해상도 단위는 인치. QT에서 쓰는건 미터단위.
+    outImage->setDotsPerMeterX(inchConvertToMeter(pEncoder->fResX));
+    outImage->setDotsPerMeterY(inchConvertToMeter(pEncoder->fResY));
+
+    // < -- 데이터 복사 -- >
+    {
+        uint stride = outImage->bytesPerLine();
+        uchar *dest = outImage->bits();
+        uchar *src = buffer;
+        for(uint y = 0; y < pEncoder->uHeight; y++){
+            std::memcpy(dest, src, line);
+            dest += stride;
+            src += line;
+        }
+    }
 }
 
 ERR HdpImageIOHandler::PKCodecFactory_CreateDecoderFromMemory(
@@ -167,15 +188,20 @@ ERR HdpImageIOHandler::PKCodecFactory_CreateDecoderFromMemory(
 
     struct WMPStream *pStream = nullptr;
     PKImageDecode *pDecoder = nullptr;
-
-    QByteArray source;
+    QByteArray source(device()->readAll());
+    U8 *src;
+    uint ps = static_cast<uint>(source.size());
 
     // get decode PKIID
     Call(GetImageDecodeIID(".hdp", &pIID));
 
     // create stream
-    source = device()->readAll();
-    Call(CreateWS_Memory(&pStream, static_cast<void*>(source.data()), static_cast<size_t>(source.size())));
+    //src = new char[ps];
+    src = (U8*)malloc(source.size());
+    //qstrncpy(src, source.data(), ps);
+    src = (U8*)memcpy(src, source.data(), ps);
+    //qstrncpy(reinterpret_cast<char*>(src), source.data(), source.size());
+    Call(CreateWS_Memory(&pStream, src, static_cast<size_t>(source.size())));
 
     // Create decoder
     Call(PKCodecFactory_CreateCodec(pIID, reinterpret_cast<void**>(ppDecoder)));
@@ -192,13 +218,12 @@ Cleanup:
 /** RGBA 순서로된 바이트 배열을 ARGB 순서로 재배열한다.
   */
 void HdpImageIOHandler::convertRgbaToArgb(
-        QByteArray &data   ///< 재배열 할 데이터
+        uchar *p,   ///< 재배열 할 데이터 포인터
+        uint size   ///< 재배열 할 데이터 사이즈
         )
 {
     quint8 r, g, b, a;
-    uchar *p = reinterpret_cast<uchar*>(data.data());
-    int size = data.size();
-    int i = 0;
+    uint i = 0;
     while( i < size ) {
         r = p[0];
         g = p[1];
@@ -216,16 +241,15 @@ void HdpImageIOHandler::convertRgbaToArgb(
 
 ERR PKImageEncode_WritePixels_RAW(
         PKImageEncode *pIE, ///< PKImageEncode
-        U32 cLine,
+        U32 cLine,          ///< 픽셀 데이터의 한 열의 높이
         U8 *pbPixel,        ///< 픽셀 데이터
-        U32 cbStride
+        U32 cbStride        ///< 픽셀 데이터의 한 행의 폭
         )
 {
     ERR err = WMP_errSuccess;
 
     struct WMPStream* pS = pIE->pStream;
     size_t cbLineM = 0;
-    size_t size;
 
     pIE->fHeaderDone = !FALSE;
 
@@ -234,14 +258,7 @@ ERR PKImageEncode_WritePixels_RAW(
 
     FailIf(cbStride < cbLineM, WMP_errInvalidParameter);
 
-    if ( pIE->WMP.bHasAlpha ) {
-        size = pIE->uWidth * pIE->uHeight * 4;
-    }
-    else {
-        size = pIE->uWidth * pIE->uHeight * 3;
-    }
-
-    pS->Write(pS, pbPixel, size);
+    pS->Write(pS, pbPixel, pS->state.buf.cbBuf);
 
     pIE->idxCurrentLine += cLine;
 

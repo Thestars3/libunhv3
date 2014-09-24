@@ -80,7 +80,11 @@ public:
     QString   originalPublishingDate() const;
     QDateTime createdTime() const;
 
+protected:
+    bool decrypt(const QString &filePathName, QByteArray &encryptedData) const;
+
 private:
+
     QRegExp *extension;         ///< HDP 확장자 표현식
     Unhv3Event *event_;         ///< 이벤트 처리자.
     bool openStatus;            ///< 파일 열림 여부.

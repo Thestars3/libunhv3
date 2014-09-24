@@ -7,5 +7,5 @@
 TEMPLATE = subdirs
 
 SUBDIRS  = \
-	jxrgluelib \
+	libjxrglue.pro \
 	image/libjpegxr.pro

@@ -12,6 +12,7 @@ int main(int argc, char *argv[])
     QCoreApplication a(argc, argv);
 
     QCoreApplication::addLibraryPath("../../hdp_image_plugin/Debug");
+    qDebug() << QCoreApplication::applicationDirPath();
 
     Unhv3 unhv3;
 
