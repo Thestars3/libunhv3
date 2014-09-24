@@ -19,6 +19,7 @@ QT       += gui
 VERSION  = $$system(cat $${ROOT_PATH}/version)
 
 HEADERS  += \
+    unhv3_global.hpp \
 	ufp.hpp
 
 SOURCES  += \

@@ -3,7 +3,6 @@ INCLUDEPATH *= $$PWD
 
 HEADERS  += \
     $$PWD/unhv3.hpp \
-    $$PWD/unhv3_global.hpp \
     $$PWD/unhv3event.hpp \
     $$PWD/unhv3status.hpp \ 
 	$$PWD/EventInterface.hpp \

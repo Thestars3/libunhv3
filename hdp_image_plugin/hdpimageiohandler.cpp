@@ -196,11 +196,8 @@ ERR HdpImageIOHandler::PKCodecFactory_CreateDecoderFromMemory(
     Call(GetImageDecodeIID(".hdp", &pIID));
 
     // create stream
-    //src = new char[ps];
     src = (U8*)malloc(source.size());
-    //qstrncpy(src, source.data(), ps);
     src = (U8*)memcpy(src, source.data(), ps);
-    //qstrncpy(reinterpret_cast<char*>(src), source.data(), source.size());
     Call(CreateWS_Memory(&pStream, src, static_cast<size_t>(source.size())));
 
     // Create decoder

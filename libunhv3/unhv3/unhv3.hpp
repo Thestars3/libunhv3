@@ -18,6 +18,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 
 #include <QUuid>
 #include <QString>
+#include <QObject>
 #include <QDateTime>
 #include "fileinfo.hpp"
 #include "unhv3status.hpp"
@@ -32,10 +33,13 @@ class FileDataStorage;
 
 /** hv3(꿀뷰 전용 포멧)을 풀어줍니다.\n
   이 클래스의 멤버 중 `[A-Z0-9]{4}_'형식으로 된 이름은 청크명, 청크 속성명입니다.\n
-  라이브러리 제작에 <a href="http://www.kippler.com/doc/bond/BondFormat.txt">BondFormat Specification v1.0</a>를 참고하였습니다.
+  BOND 포멧 상세 : <a href="http://www.kippler.com/doc/bond/BondFormat.txt">BondFormat Specification v1.0</a>
   */
-class UNHV3SHARED_EXPORT Unhv3
+class UNHV3SHARED_EXPORT Unhv3 :
+        public QObject
 {
+    Q_OBJECT
+
 public:
     Unhv3();
     ~Unhv3();
@@ -50,6 +54,7 @@ public:
     bool isEncrypted() const;
     bool isBrokenArchive() const;
     Unhv3Status lastError() const;
+    int convertedLastError() const;
     const FileInfo* getFileItem(int index) const;
 
     // < -- 파일 정보 -- >
@@ -84,7 +89,6 @@ protected:
     bool decrypt(const QString &filePathName, QByteArray &encryptedData) const;
 
 private:
-
     QRegExp *extension;         ///< HDP 확장자 표현식
     Unhv3Event *event_;         ///< 이벤트 처리자.
     bool openStatus;            ///< 파일 열림 여부.

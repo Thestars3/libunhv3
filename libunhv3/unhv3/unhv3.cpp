@@ -6,6 +6,7 @@
 #include "bondreadexception.hpp"
 #include "bondchunkheader.hpp"
 #include "filedatastorage.hpp"
+#include "arkerrconverter.hpp"
 #include "bondchunkattr.hpp"
 #include "fileinfolist.hpp"
 #include "unhv3event.hpp"
@@ -74,6 +75,14 @@ Unhv3::Unhv3() :
 Unhv3Status Unhv3::lastError() const
 {
     return status;
+}
+
+/** 마지막으로 발생한 오류의 상세 내용을 확인한다.
+  @return 상태코드에 대응되는 ARKERR.
+  */
+int Unhv3::convertedLastError() const
+{
+    return static_cast<int>(ArkerrConverter::ConvertUnhv3Status(status));
 }
 
 /** 메모리로 직접 해제해 보면서 파일의 손상 여부를 확인합니다.
