@@ -132,9 +132,8 @@ bool Unhv3::testArchive() const
             event_->setError(filePathName, status);
             return false;
         }
-        event_->setProgress(99);
+        event_->setComplete( static_cast<float>( index + 1 ) / static_cast<float>(max) * 100.0f );
     }
-    event_->setComplete();
     return false;
 }
 
@@ -192,13 +191,12 @@ bool Unhv3::extractAllTo(
     }
 
     event_->setOpen();
-    int max = fileItemCount();
-    for (int i = 0; i < max; i++) {
-        if ( ! extractOneTo(i, savePath) ) {
+    for (int index = 0, max = fileItemCount(); index < max; index++) {
+        if ( ! extractOneTo(index, savePath) ) {
             success = false;
         }
+        event_->setComplete( static_cast<float>( index + 1 ) / static_cast<float>(max) * 100.0f );
     }
-    event_->setComplete();
 
     return success;
 }
@@ -401,13 +399,14 @@ bool Unhv3::decrypt(
   */
 bool Unhv3::extractOneAs(
         int index,
-        QString filePathName ///< 저장될 파일의 이름을 포함한 경로
+        const QString &savePath  ///< 저장 경로
         ) const
 {
     const FileInfo *fileItem = LIST_->getFileItem(index);
+    QString originalName = fileItem->NAME();
     QByteArray raw_data;
 
-    event_->setStartFile(filePathName);
+    event_->setStartFile(originalName);
     event_->setProgress(0);
 
     // < -- 데이터를 메모리에 로드 -- >
@@ -422,7 +421,7 @@ bool Unhv3::extractOneAs(
     event_->setProgress(25);
 
     // < -- 복호화 -- >
-    if ( ! decrypt(filePathName, raw_data) ) {
+    if ( ! decrypt(originalName, raw_data) ) {
         return false;
     }
     event_->setProgress(50);
@@ -430,20 +429,20 @@ bool Unhv3::extractOneAs(
     // < -- CRC-32 -- >
     if ( ufp::computeCrc32(raw_data) != fileItem->CRC3() ) {
         status = Unhv3Status::CRC_ERROR;
-        event_->setError(filePathName, status);
+        event_->setError(originalName, status);
         return false;
     }
     event_->setProgress(70);
 
     // < -- 변환 및 저장 -- >
     {
-        bool thisFileIsHv3 = fileItem->NAME().contains(*extension);
+        bool thisFileIsHv3 = originalName.contains(*extension);
         bool hv3ConvertSuccess = false;
 
         // < -- 변환 후 저장 -- >
         if ( thisFileIsHv3 ) {
-            QImage image = QImage::fromData(raw_data, "hdp");
-            QString convertedPath = filePathName;
+            QImage image(QImage::fromData(raw_data, "hdp"));
+            QString convertedPath(savePath);
             bool imageHasAlphaChannel = image.hasAlphaChannel();
 
             if ( imageHasAlphaChannel ) {
@@ -464,26 +463,29 @@ bool Unhv3::extractOneAs(
                 hv3ConvertSuccess = image.save(convertedPath, "jpg", 100);
             }
 
-            event_->setProgress(99);
+            if ( hv3ConvertSuccess ) {
+                event_->setProgress(99);
+            }
         }
 
         // < -- 저장 -- >
         if ( ! thisFileIsHv3 || ! hv3ConvertSuccess ) {
-            if ( event_ != nullptr && QFile::exists(filePathName) ) {
-                filePathName = event_->convertDuplicatedName(filePathName);
+            QString convertedPath(savePath);
+            if ( event_ != nullptr && QFile::exists(convertedPath) ) {
+                convertedPath = event_->convertDuplicatedName(convertedPath);
             }
 
-            QFile file(filePathName);
+            QFile file(convertedPath);
 
             if ( ! file.open(QFile::WriteOnly) ) {
                 status = Unhv3Status::SAVE_FILE_ERROR;
-                event_->setError(filePathName, status);
+                event_->setError(originalName, status);
                 return false;
             }
 
             if ( file.write(raw_data) == -1 ) {
                 status = Unhv3Status::SAVE_FILE_ERROR;
-                event_->setError(filePathName, status);
+                event_->setError(originalName, status);
                 file.close();
                 return false;
             }

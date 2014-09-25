@@ -111,7 +111,9 @@ void Unhv3Event::setProgress(
 
 /** 압축 파일의 끝임을 알립니다.
   */
-void Unhv3Event::setComplete()
+void Unhv3Event::setComplete(
+        float totalProgress
+        )
 {
     if ( event_ == nullptr ) {
         return;
@@ -119,7 +121,7 @@ void Unhv3Event::setComplete()
 
     SArkProgressInfo progressInfo;
 
-    progressInfo.fTotPercent = 100;
+    progressInfo.fTotPercent = totalProgress;
 
     event_->OnCompleteFile(&progressInfo, ARKERR_NOERR);
 }

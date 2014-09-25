@@ -67,7 +67,7 @@ public:
     // < -- 압축 풀기 -- >
     bool extractAllTo(const QString &savePath) const;
     bool extractOneTo(int index, QString savePath) const;
-    bool extractOneAs(int index, QString filePathName) const;
+    bool extractOneAs(int index, const QString &savePath) const;
 
     // < -- 메타 정보 -- >
     uint      direction() const;

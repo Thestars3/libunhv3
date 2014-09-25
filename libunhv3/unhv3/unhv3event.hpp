@@ -34,7 +34,7 @@ public:
     void setStartFile(const QString &filePath);
     void setError(const QString &filePathName, const Unhv3Status &status);
     void setProgress(float progress);
-    void setComplete();
+    void setComplete(float totalProgress);
     QString convertDuplicatedName(const QString &filePath);
 
 };
