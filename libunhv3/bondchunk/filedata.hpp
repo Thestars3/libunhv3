@@ -20,6 +20,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.*/
 #include <QDataStream>
 #include "bondchunkheader.hpp"
 
+class QFile;
+
 class FileData
 {
 private:
@@ -35,7 +37,7 @@ public:
     // < -- Getter -- >
     quint64 pos() const;
     BondChunkHeader FILE() const;
-    QByteArray raw_data(class QFile *device) const;
+    QByteArray raw_data(QFile *device) const;
 
 };
 

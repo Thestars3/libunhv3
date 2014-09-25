@@ -30,7 +30,9 @@ public:
     virtual bool read(QImage *outImage);
 
 private:
+    ERR WMPAlloc(void** ppv, size_t cb);
     ERR PKCodecFactory_CreateDecoderFromMemory(PKImageDecode **ppDecoder);
+    ERR createEncoderFromMemory(PKImageEncode **ppEncoder, size_t bufferSize);
     void writeImage(PKImageEncode *pEncoder, QImage *outImage);
     void convertRgbaToArgb(uchar *p, uint size);
 

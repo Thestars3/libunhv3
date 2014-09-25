@@ -1,3 +1,4 @@
+#include <QDir>
 #include <QFile>
 #include <QImage>
 #include <QRegExp>
@@ -121,8 +122,10 @@ bool Unhv3::testArchive() const
         event_->setProgress(35);
 
         // < -- 복호화 -- >
-        if ( ! decrypt(filePathName, raw_data) ) {
-            return false;
+        if ( isEncrypted() ) {
+            if ( ! decrypt(filePathName, raw_data) ) {
+                return false;
+            }
         }
         event_->setProgress(75);
 
@@ -363,7 +366,8 @@ bool Unhv3::extractOneTo(
         QString savePath ///< 저장될 경로
         ) const
 {
-    savePath += "/" + getFileItem(index)->NAME();
+    savePath += "/" + getFileItem(index)->NAME().replace("\\", "/");
+    QFileInfo(savePath).dir().mkpath(".");
     return extractOneAs(index, savePath);
 }
 
@@ -421,8 +425,10 @@ bool Unhv3::extractOneAs(
     event_->setProgress(25);
 
     // < -- 복호화 -- >
-    if ( ! decrypt(originalName, raw_data) ) {
-        return false;
+    if ( isEncrypted() ) {
+        if ( ! decrypt(originalName, raw_data) ) {
+            return false;
+        }
     }
     event_->setProgress(50);
 
@@ -430,7 +436,6 @@ bool Unhv3::extractOneAs(
     if ( ufp::computeCrc32(raw_data) != fileItem->CRC3() ) {
         status = Unhv3Status::CRC_ERROR;
         event_->setError(originalName, status);
-        return false;
     }
     event_->setProgress(70);
 

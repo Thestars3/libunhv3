@@ -7,6 +7,26 @@
 
 static ERR PKImageEncode_WritePixels_RAW(PKImageEncode *pIE, U32 cLine, U8 *pbPixel, U32 cbStride);
 
+static ERR WMPFree(void** ppv)
+{
+    if (*ppv)
+    {
+        free(*ppv);
+        *ppv = NULL;
+    }
+
+    return WMP_errSuccess;
+}
+
+ERR HdpImageIOHandler::WMPAlloc(
+        void **ppv,
+        size_t cb
+        )
+{
+    *ppv = calloc(1, cb);
+    return *ppv ? WMP_errSuccess : WMP_errOutOfMemory;
+}
+
 bool HdpImageIOHandler::canRead() const
 {
     if ( ! device() ) {
@@ -46,12 +66,10 @@ bool HdpImageIOHandler::read(
     PKImageDecode *pDecoder = nullptr;
     PKFactory *pFactory = nullptr;
     PKCodecFactory *pCodecFactory = nullptr;
-    WMPStream *pEncodeStream = nullptr; // 인코드 스트림
     PKImageEncode *pEncoder = nullptr; // 인코더
     PKFormatConverter *pConverter = nullptr; // 컨버터
     PKPixelFormatGUID guidPixFormat;
     size_t bufferSize;
-    U8 *buffer;
     PKRect rect = {0, 0, 0, 0}; // 크기
 
     Call(PKCreateFactory(&pFactory, PK_SDK_VERSION));
@@ -95,11 +113,7 @@ bool HdpImageIOHandler::read(
     Call(pConverter->Initialize(pConverter, pDecoder, nullptr, guidPixFormat)); // 널 포인터를 인자로 주어 확장자에 따른 픽셀 포멧 지정을 막음.
 
     // < -- 인코더 준비 -- >
-    buffer = reinterpret_cast<U8*>(malloc( bufferSize * sizeof(U8) ));
-    Call(pFactory->CreateStreamFromMemory(&pEncodeStream, buffer, bufferSize));
-    Call(PKImageEncode_Create(&pEncoder));
-    pEncoder->WritePixels = PKImageEncode_WritePixels_RAW;
-    pEncoder->Initialize(pEncoder, pEncodeStream, nullptr, 0);
+    createEncoderFromMemory(&pEncoder, bufferSize);
 
     // < -- 출력 화소 포멧 설정 -- >
     Call(pEncoder->SetPixelFormat(pEncoder, guidPixFormat));
@@ -123,9 +137,11 @@ bool HdpImageIOHandler::read(
     writeImage(pEncoder, outImage);
 
     // < -- 인코더 할당 해제 -- >
+    Call(WMPFree((void**)&pEncoder->pStream->state.buf.pbBuf));
     pEncoder->Release(&pEncoder);
 
     // < -- 디코더 할당 해제 -- >
+    Call(WMPFree((void**)&pDecoder->pStream->state.buf.pbBuf));
     pDecoder->Release(&pDecoder);
 
 Cleanup:
@@ -178,6 +194,33 @@ void HdpImageIOHandler::writeImage(
     }
 }
 
+ERR HdpImageIOHandler::createEncoderFromMemory(
+        PKImageEncode **ppEncoder,
+        size_t bufferSize
+        )
+{
+    ERR err = WMP_errSuccess;
+
+    struct WMPStream *pStream = nullptr;
+    PKImageEncode *pEncoder;
+    U8 *buffer = nullptr;
+
+    // create stream
+    Call(WMPAlloc((void**)&buffer, bufferSize));
+    Call(CreateWS_Memory(&pStream, buffer, bufferSize));
+
+    // Create encoder
+    Call(PKImageEncode_Create(ppEncoder));
+    pEncoder = *ppEncoder;
+
+    // attach stream to encoder
+    pEncoder->WritePixels = PKImageEncode_WritePixels_RAW;
+    Call(pEncoder->Initialize(pEncoder, pStream, nullptr, 0));
+
+Cleanup:
+    return err;
+}
+
 ERR HdpImageIOHandler::PKCodecFactory_CreateDecoderFromMemory(
         PKImageDecode **ppDecoder ///< PKImageDecode 이중 포인터
         )
@@ -189,16 +232,16 @@ ERR HdpImageIOHandler::PKCodecFactory_CreateDecoderFromMemory(
     struct WMPStream *pStream = nullptr;
     PKImageDecode *pDecoder = nullptr;
     QByteArray source(device()->readAll());
-    U8 *src;
-    uint ps = static_cast<uint>(source.size());
+    U8 *buffer = nullptr;
+    uint bufferSize = static_cast<uint>(source.size());
 
     // get decode PKIID
     Call(GetImageDecodeIID(".hdp", &pIID));
 
     // create stream
-    src = (U8*)malloc(source.size());
-    src = (U8*)memcpy(src, source.data(), ps);
-    Call(CreateWS_Memory(&pStream, src, static_cast<size_t>(source.size())));
+    Call(WMPAlloc((void**)&buffer, bufferSize));
+    buffer = (U8*)std::memcpy(buffer, source.data(), bufferSize);
+    Call(CreateWS_Memory(&pStream, buffer, bufferSize));
 
     // Create decoder
     Call(PKCodecFactory_CreateCodec(pIID, reinterpret_cast<void**>(ppDecoder)));
