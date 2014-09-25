@@ -10,6 +10,7 @@
 Debug/
 Release/
 /collect
+/test
 /sync
 /memo.txt
 /BondFormat.txt

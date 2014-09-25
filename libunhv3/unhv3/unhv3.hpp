@@ -62,6 +62,7 @@ public:
     uint formatVersion() const;
     uint archiveFileSize() const;
     QString filePathName() const;
+    quint32 fileDataSize(int index) const;
 
     // < -- 압축 풀기 -- >
     bool extractAllTo(const QString &savePath) const;

@@ -16,7 +16,7 @@ TARGET   = unhv3
 
 QT       += gui
 
-VERSION  = $$system(cat $${ROOT_PATH}/version)
+VERSION  = $$system(cat "'$${ROOT_PATH}/version'")
 
 HEADERS  += \
     unhv3_global.hpp \

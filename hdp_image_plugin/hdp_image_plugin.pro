@@ -24,4 +24,7 @@ SOURCES  += \
 
 QMAKE_CXXFLAGS += -std=c++0x
 
-DESTDIR = $$DESTDIR/imageformats
+#Debug
+CONFIG(debug, debug|release) {
+	DESTDIR = $$DESTDIR/imageformats
+}

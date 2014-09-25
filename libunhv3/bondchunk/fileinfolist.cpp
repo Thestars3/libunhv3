@@ -29,13 +29,6 @@ FileInfoList::FileInfoList() :
 {
 }
 
-/** 소멸자.
-  */
-FileInfoList::~FileInfoList()
-{
-    qDeleteAll(fileInfoList_);
-}
-
 /** 전체 아이템 개수를 얻습니다.
   @return 전체 아이템 개수
   */

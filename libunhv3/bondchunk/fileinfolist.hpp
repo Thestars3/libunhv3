@@ -30,7 +30,6 @@ private:
 
 public:
     FileInfoList();
-    ~FileInfoList();
     const FileInfo* getFileItem(int index) const;
     int getFileItemCount() const;
 

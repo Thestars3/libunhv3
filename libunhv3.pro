@@ -6,10 +6,9 @@
 
 TEMPLATE = subdirs
 
+CONFIG   += ordered
+
 SUBDIRS  = \
 	jxrlib \
 	hdp_image_plugin \
-	libunhv3 \
-	example
-
-CONFIG   += ordered
+	libunhv3

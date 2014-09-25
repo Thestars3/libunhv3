@@ -146,3 +146,8 @@
 #### v1.0.1
 
 + int Unhv3::convertedLastError() const; 메소드를 추가.
+
+### v1.1.0
+
++ quint32 Unhv3::fileDataSize(int index) const; 메소드를 추가.
++ bool Unhv3::testArchive() const; 메소드를 추가.

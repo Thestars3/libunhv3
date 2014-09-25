@@ -40,13 +40,23 @@ void Unhv3::setEvent(
   */
 Unhv3::~Unhv3()
 {
-    delete LIST_;
     delete HV30_;
+    delete LIST_;
     delete HEAD_;
     delete BODY_;
     delete file;
     delete event_;
     delete extension;
+}
+
+/** 특정 인덱스의 파일 데이터 크기를 가져옵니다.
+  @return 특정 인덱스의 파일 데이터 크기
+  */
+quint32 Unhv3::fileDataSize(
+        int index ///< 인덱스
+        ) const
+{
+    return BODY_->getFileData(LIST_->getFileItem(index)->POS4())->FILE().chunkDataSize();
 }
 
 /** 생성자.
@@ -90,7 +100,41 @@ int Unhv3::convertedLastError() const
   */
 bool Unhv3::testArchive() const
 {
-    status = Unhv3Status::NOT_YET_IMPELEMENTED;
+    event_->setOpen();
+    for (int index = 0, max = fileItemCount(); index < max; index++) {
+        const FileInfo *fileItem = LIST_->getFileItem(index);
+        QString filePathName = fileItem->NAME();
+        QByteArray raw_data;
+
+        event_->setStartFile(filePathName);
+        event_->setProgress(0);
+
+        // < -- 데이터를 메모리에 로드 -- >
+        try {
+            uint pos = fileItem->POS4();
+            raw_data = BODY_->getFileData(pos)->raw_data(file);
+        }
+        catch (BondReadException&) {
+            status = Unhv3Status::IS_BROKEN_FILE;
+            return false;
+        }
+        event_->setProgress(35);
+
+        // < -- 복호화 -- >
+        if ( ! decrypt(filePathName, raw_data) ) {
+            return false;
+        }
+        event_->setProgress(75);
+
+        // < -- CRC-32 -- >
+        if ( ufp::computeCrc32(raw_data) != fileItem->CRC3() ) {
+            status = Unhv3Status::CRC_ERROR;
+            event_->setError(filePathName, status);
+            return false;
+        }
+        event_->setProgress(99);
+    }
+    event_->setComplete();
     return false;
 }
 
